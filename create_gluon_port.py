@@ -65,7 +65,7 @@ class GluonPort:
             self.username, self.password, self.enterprise, self.api_url))
         self.session.start()
 
-    def createPort(self):
+    def create_port(self):
         """Create Gluon port.
         """
 
@@ -144,10 +144,14 @@ class GluonPort:
 
 def getargs():
     parser = argparse.ArgumentParser(description='Create Gluon ports.')
+
     parser.add_argument('-d', '--debug', required=False, help='Enable debug output', dest='debug',
                         action='store_true')
     parser.add_argument('-c', '--config-file', required=False, help='configuration file',
                         dest='config_file', type=str)
+    parser.add_argument('-v', '--verbose', required=False, help='Enable verbose output', dest='verbose',
+                        action='store_true')
+
     args = parser.parse_args()
     return args
 
@@ -163,13 +167,14 @@ def parse_config_file(config_file):
     for section in parser.sections():
         for name, value in parser.items(section):
             config[name] = value
-            print '  %s = %r' % (name, value)
+            #print '  %s = %r' % (name, value)
 
     return config
 
 
 def main():
-    """ main program to test the GluonPort.
+    """ main program to test the GluonPort. Usage
+    python create_gluon_port.py -c <config file> -v
     """
     args = getargs()
 
@@ -191,21 +196,27 @@ def main():
             'subnet_name': '',
             'vport_name': '',
             'vm_name': '',
+            'vm_mac' : '',
             'vm_ip': '',
             'vm_uuid': '',
             'netmask' : '',
             'network_address' : ''
         }
 
-    set_log_level(logging.INFO)
+    if args.verbose:
+        log_level = logging.INFO
+    else:
+        log_level = logging.WARNING
+
+    logging.basicConfig(level=log_level)
 
     gp = GluonPort(config)
 
-    if gp.createPort():
-        logging.info('Port successfully created')
+    if gp.create_port():
+        logging.info('Gluon port successfully created')
 
     else:
-        logging.info("Port creation failed")
+        logging.info("Gluon port creation failed")
 
 
 if __name__ == "__main__":
