@@ -52,15 +52,17 @@ from bambou.exceptions import BambouHTTPError
 class GluonPort:
     """ Represents Gluon port. """
 
-    config = {}
+    #config = {}
 
     def __init__(self, config):
-        self.config = config
-        self.session = vsdk.NUVSDSession(username=self.config.username, password=self.config.password,
-                                         enterprise=self.config.enterprise, api_url=self.config.api_url)
+        for k, v in config.items():
+            setattr(self, k, v)
+
+        self.session = vsdk.NUVSDSession(username=self.username, password=self.password,
+                                         enterprise=self.enterprise, api_url=self.api_url)
 
         logging.info("starting session username: %s, password: %s, enterprise: %s, api_url: %s" % (
-            config.username, config.password, config.enterprise, config.api_url))
+            self.username, self.password, self.enterprise, self.api_url))
         self.session.start()
 
     def createPort(self):
@@ -70,68 +72,69 @@ class GluonPort:
         # get enterprise
         self.session.user.enterprises.fetch()
         enterprise = next((enterprise for enterprise in self.session.user.enterprises if
-                           enterprise.name == self.config.enterprise_name), None)
+                           enterprise.name == self.enterprise_name), None)
 
         if enterprise is None:
             logging.critical("Enterprise %s not found, exiting" % enterprise)
+            print "can't find enterprise"
             return False
 
         # get domains
         enterprise.domains.fetch()
 
-        domain = next((domain for domain in enterprise.domains if domain.name == self.config.domain_name), None)
+        domain = next((domain for domain in enterprise.domains if domain.name == self.domain_name), None)
 
         if domain is None:
-            logging.info("Domain %s not found, creating domain" % self.config.domain_name)
+            logging.info("Domain %s not found, creating domain" % self.domain_name)
 
-            domain = vsdk.NUDomain(name=self.config.domain_name, template_id=self.domain_template_id)
+            domain = vsdk.NUDomain(name=self.domain_name, template_id=self.domain_template_id)
             enterprise.create_child(domain)
 
         # get zone
         domain.zones.fetch()
 
-        zone = next((zone for zone in domain.zones if zone.name == self.config.zone_name), None)
+        zone = next((zone for zone in domain.zones if zone.name == self.zone_name), None)
 
         if zone is None:
-            logging.info("Zone %s not found, creating zone" % self.config.zone_name)
+            logging.info("Zone %s not found, creating zone" % self.zone_name)
 
-            zone = vsdk.NUZone(name=self.config.zone_name)
+            zone = vsdk.NUZone(name=self.zone_name)
             domain.create_child(zone)
 
         # get subnet
         zone.subnets.fetch()
-        subnet = next((subnet for subnet in zone.subnets if subnet.name == self.config.subnet_name), None)
+        subnet = next((subnet for subnet in zone.subnets if subnet.name == self.subnet_name), None)
 
         if subnet is None:
-            logging.info("Subnet %s not found, creating subnet" % self.config.subnet_name)
+            logging.info("Subnet %s not found, creating subnet" % self.subnet_name)
 
-            subnet = vsdk.NUSubnet(name=self.config.subnet_name, address=self.config.network_address,
-                                   netmask=self.config.netmask)
+            subnet = vsdk.NUSubnet(name=self.subnet_name, address=self.network_address,
+                                   netmask=self.netmask)
             zone.create_child(subnet)
 
         # get vport
         subnet.vports.fetch()
-        vport = next((vport for vport in subnet.vports if vport.name == self.config.vport_name), None)
+        vport = next((vport for vport in subnet.vports if vport.name == self.vport_name), None)
 
         if vport is None:
             # create vport
-            logging.info("Vport %s is not found, creating Vport" % self.config.vport_name)
+            logging.info("Vport %s is not found, creating Vport" % self.vport_name)
 
-            vport = vsdk.NUVPort(name=self.config.vport_name, address_spoofing='INHERITED', type='VM',
+            vport = vsdk.NUVPort(name=self.vport_name, address_spoofing='INHERITED', type='VM',
                                  description='Automatically created, do not edit.')
             subnet.create_child(vport)
 
         # get vm
-        vm = self.session.user.fetcher_for_rest_name('vm').get('name=="%s"' % self.config.vm_name)
+        vm = self.session.user.fetcher_for_rest_name('vm').get('name=="%s"' % self.vm_name)
 
         if not vm:
-            logging.info("Vport %s is not found, creating Vport" % self.config.vport_name)
+            logging.info("Vport %s is not found, creating Vport" % self.vport_name)
 
-            vm = vsdk.NUVM(name=self.config.vm_name, uuid=self.config.vm_uuid, interfaces=[{
-                'name': self.config.vm_name,
+            vm = vsdk.NUVM(name=self.vm_name, uuid=self.vm_uuid, interfaces=[{
+                'name': self.vm_name,
                 'VPortID': vport.id,
-                'MAC': self.config.vm_mac,
-                'IPAddress': self.config.vm_ip
+                'MAC': self.vm_mac,
+                'IPAddress': self.vm_ip
             }])
 
             self.session.user.create_child(vm)
@@ -171,7 +174,7 @@ def main():
     args = getargs()
 
     if args.config_file:
-        config_file = args.logfile
+        config_file = args.config_file
         config = parse_config_file(config_file)
 
     else:
@@ -189,10 +192,12 @@ def main():
             'vport_name': '',
             'vm_name': '',
             'vm_ip': '',
-            'vm_uuid': ''
+            'vm_uuid': '',
+            'netmask' : '',
+            'network_address' : ''
         }
 
-    set_log_level(logging.ERROR)
+    set_log_level(logging.INFO)
 
     gp = GluonPort(config)
 
