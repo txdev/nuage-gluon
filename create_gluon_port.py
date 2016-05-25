@@ -166,7 +166,7 @@ def main():
         logging.info('Port successfully created')
 
     else:
-        logging.info("Port successfully created")
+        logging.info("Port creation failed")
 
 if __name__ == "__main__":
     main()
