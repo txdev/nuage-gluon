@@ -40,6 +40,9 @@ run 'python create-gluon-port.py
 """
 
 import sys
+import argparse
+import ConfigParser
+
 from vspk import v3_2 as vsdk
 from vspk.utils import set_log_level
 import logging
@@ -57,7 +60,7 @@ class GluonPort:
                                          enterprise=self.config.enterprise, api_url=self.config.api_url)
 
         logging.info("starting session username: %s, password: %s, enterprise: %s, api_url: %s" % (
-        config.username, config.password, config.enterprise, config.api_url))
+            config.username, config.password, config.enterprise, config.api_url))
         self.session.start()
 
     def createPort(self):
@@ -133,30 +136,61 @@ class GluonPort:
 
             self.session.user.create_child(vm)
 
-
         return True
+
+
+def getargs():
+    parser = argparse.ArgumentParser(description='Create Gluon ports.')
+    parser.add_argument('-d', '--debug', required=False, help='Enable debug output', dest='debug',
+                        action='store_true')
+    parser.add_argument('-c', '--config-file', required=False, help='configuration file',
+                        dest='config_file', type=str)
+    args = parser.parse_args()
+    return args
+
+
+def parse_config_file(config_file):
+    """ read configuration file """
+    parser = ConfigParser.ConfigParser()
+
+    parser.read(config_file)
+
+    config = {}
+
+    for section in parser.sections():
+        for name, value in parser.items(section):
+            config[name] = value
+            print '  %s = %r' % (name, value)
+
+    return config
 
 
 def main():
     """ main program to test the GluonPort.
     """
+    args = getargs()
 
-    config = {
-        'username': '',
-        'password': '',
-        'enterprise': '',
-        'api_url': '',
-        'enterprise_name': '',
-        'domain_name': '',
-        'domain_rt': '',
-        'domain_rd': '',
-        'zone_name': '',
-        'subnet_name': '',
-        'vport_name': '',
-        'vm_name': '',
-        'vm_ip': '',
-        'vm_uuid': ''
-    }
+    if args.config_file:
+        config_file = args.logfile
+        config = parse_config_file(config_file)
+
+    else:
+        config = {
+            'username': '',
+            'password': '',
+            'enterprise': '',
+            'api_url': '',
+            'enterprise_name': '',
+            'domain_name': '',
+            'domain_rt': '',
+            'domain_rd': '',
+            'zone_name': '',
+            'subnet_name': '',
+            'vport_name': '',
+            'vm_name': '',
+            'vm_ip': '',
+            'vm_uuid': ''
+        }
 
     set_log_level(logging.ERROR)
 
@@ -167,6 +201,7 @@ def main():
 
     else:
         logging.info("Port successfully created")
+
 
 if __name__ == "__main__":
     main()
