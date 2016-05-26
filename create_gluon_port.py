@@ -39,20 +39,15 @@ run 'python create-gluon-port.py
 
 """
 
-import sys
 import argparse
 import ConfigParser
 
 from vspk import v3_2 as vsdk
-from vspk.utils import set_log_level
 import logging
-from bambou.exceptions import BambouHTTPError
 
 
 class GluonPort:
     """ Represents Gluon port. """
-
-    #config = {}
 
     def __init__(self, config):
         for k, v in config.items():
@@ -70,9 +65,7 @@ class GluonPort:
         """
 
         # get enterprise
-        self.session.user.enterprises.fetch()
-        enterprise = next((enterprise for enterprise in self.session.user.enterprises if
-                           enterprise.name == self.enterprise_name), None)
+        enterprise = self.session.user.enterprises.get_first(filter='name == "%s"' % self.enterprise_name)
 
         if enterprise is None:
             logging.critical("Enterprise %s not found, exiting" % enterprise)
@@ -80,9 +73,7 @@ class GluonPort:
             return False
 
         # get domains
-        enterprise.domains.fetch()
-
-        domain = next((domain for domain in enterprise.domains if domain.name == self.domain_name), None)
+        domain = enterprise.domains.get_first(filter='name == "%s"' % self.domain_name)
 
         if domain is None:
             logging.info("Domain %s not found, creating domain" % self.domain_name)
@@ -91,9 +82,7 @@ class GluonPort:
             enterprise.create_child(domain)
 
         # get zone
-        domain.zones.fetch()
-
-        zone = next((zone for zone in domain.zones if zone.name == self.zone_name), None)
+        zone = domain.zones.get_first(filter='name == "%s"' % self.zone_name)
 
         if zone is None:
             logging.info("Zone %s not found, creating zone" % self.zone_name)
@@ -102,8 +91,7 @@ class GluonPort:
             domain.create_child(zone)
 
         # get subnet
-        zone.subnets.fetch()
-        subnet = next((subnet for subnet in zone.subnets if subnet.name == self.subnet_name), None)
+        subnet = zone.subnets.get_first(filter='name == "%s"' % self.subet_name)
 
         if subnet is None:
             logging.info("Subnet %s not found, creating subnet" % self.subnet_name)
@@ -113,8 +101,7 @@ class GluonPort:
             zone.create_child(subnet)
 
         # get vport
-        subnet.vports.fetch()
-        vport = next((vport for vport in subnet.vports if vport.name == self.vport_name), None)
+        vport = subnet.vports.get_first(filter='name == "%s"' % self.vport_name)
 
         if vport is None:
             # create vport
@@ -125,10 +112,10 @@ class GluonPort:
             subnet.create_child(vport)
 
         # get vm
-        vm = self.session.user.fetcher_for_rest_name('vm').get('name=="%s"' % self.vm_name)
+        vm = self.session.vms.get_first(filter='name == "%s"' % self.vm_name)
 
         if not vm:
-            logging.info("Vport %s is not found, creating Vport" % self.vport_name)
+            logging.info("VM %s is not found, creating Vport" % self.vm_name)
 
             vm = vsdk.NUVM(name=self.vm_name, uuid=self.vm_uuid, interfaces=[{
                 'name': self.vm_name,
@@ -167,7 +154,7 @@ def parse_config_file(config_file):
     for section in parser.sections():
         for name, value in parser.items(section):
             config[name] = value
-            #print '  %s = %r' % (name, value)
+            logging.info("config key %s has value %s" % (name,value))
 
     return config
 
@@ -196,11 +183,11 @@ def main():
             'subnet_name': '',
             'vport_name': '',
             'vm_name': '',
-            'vm_mac' : '',
+            'vm_mac': '',
             'vm_ip': '',
             'vm_uuid': '',
-            'netmask' : '',
-            'network_address' : ''
+            'netmask': '',
+            'network_address': ''
         }
 
     if args.verbose:
