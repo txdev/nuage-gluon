@@ -1,5 +1,7 @@
-# Create Gluon Port
-Create Gluon port using Python VSDK. Following VSD objects are created if they don't already exist.
+# Nuage Split Activation of VMs using Python SDK
+Activate VMs on Nuage. The VMs need to be instantiated on the compute 
+using "virsh" command. 
+Following VSD objects are created if they don't already exist.
 
 	Domain
 	Zone
@@ -8,26 +10,26 @@ Create Gluon port using Python VSDK. Following VSD objects are created if they d
 	VM
 
 ## Usage
-### GluonPort class
+### NUSplitActivation class
 
-    gp = GluonPort(config)
-    gp.create_port()
+    sa = NUSplitActivation(config)
+    sa.activate()
 
-### create_gluon_port command
+### Using command
 
-    python create_gluon_port.py -c <config file> -v
+    python vm_split_activation.py -c <config file> -v
 
 ## configuration
 
 User has to provide following configuration parameters using config.ini file:
 
     [General]
+    api_url=
     username=
     password=
     enterprise=
 
-    [Gluon]
-    api_url= 
+    [Gluon] 
     enterprise_name= VSDK_Test
     domain_name=TestDomain
     domain_rt=20001

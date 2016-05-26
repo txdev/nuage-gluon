@@ -25,7 +25,7 @@
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 """
-Contains a class and main function for creating Gluon ports.
+Contains a class and main program for split activation of VMs in Nuage.
 
 --- Author ---
 Kamal Hussain <kamal.hussain@nokia.com>
@@ -34,8 +34,8 @@ Kamal Hussain <kamal.hussain@nokia.com>
 2016-06-23 - 0.1
 
 --- Usage ---
-modify the config dictionary in the code.
-run 'python create-gluon-port.py
+Create config file with right parameters
+run 'python vm_split_activation.py -c <config-file> -v
 
 """
 
@@ -46,7 +46,7 @@ from vspk import v3_2 as vsdk
 import logging
 
 
-class GluonPort:
+class NUSplitActivation:
     """ Represents Gluon port. """
 
     def __init__(self, config):
@@ -60,7 +60,7 @@ class GluonPort:
             self.username, self.password, self.enterprise, self.api_url))
         self.session.start()
 
-    def create_port(self):
+    def activate(self):
         """Create Gluon port.
         """
 
@@ -161,7 +161,7 @@ def parse_config_file(config_file):
 
 def main():
     """ main program to test the GluonPort. Usage
-    python create_gluon_port.py -c <config file> -v
+    python vm_split_activation.py -c <config file> -v
     """
     args = getargs()
 
@@ -197,13 +197,13 @@ def main():
 
     logging.basicConfig(level=log_level)
 
-    gp = GluonPort(config)
+    gp = NUSplitActivation(config)
 
-    if gp.create_port():
-        logging.info('Gluon port successfully created')
+    if gp.activate():
+        logging.info('VM successfully activated')
 
     else:
-        logging.info("Gluon port creation failed")
+        logging.info("VM activation failed")
 
 
 if __name__ == "__main__":
