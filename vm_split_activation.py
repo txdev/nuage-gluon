@@ -31,7 +31,8 @@ Contains a class and main program for split activation of VMs in Nuage.
 Kamal Hussain <kamal.hussain@nokia.com>
 
 --- Version history ---
-2016-06-23 - 0.1
+2016-06-23 - 0.1 - First version
+2016-06-26 - 0.2 - Change from fetch() to get_first(). Renaming class and file names
 
 --- Usage ---
 Create config file with right parameters
