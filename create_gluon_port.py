@@ -78,7 +78,7 @@ class GluonPort:
         if domain is None:
             logging.info("Domain %s not found, creating domain" % self.domain_name)
 
-            domain = vsdk.NUDomain(name=self.domain_name, template_id=self.domain_template_id)
+            domain = vsdk.NUDomain(name=self.domain_name, route_target=self.route_target, route_distinguisher=self.route_distinguisher, template_id=self.domain_template_id)
             enterprise.create_child(domain)
 
         # get zone
@@ -171,23 +171,23 @@ def main():
 
     else:
         config = {
-            'username': '',
-            'password': '',
-            'enterprise': '',
             'api_url': '',
-            'enterprise_name': '',
             'domain_name': '',
-            'domain_rt': '',
-            'domain_rd': '',
-            'zone_name': '',
-            'subnet_name': '',
-            'vport_name': '',
-            'vm_name': '',
-            'vm_mac': '',
-            'vm_ip': '',
-            'vm_uuid': '',
+            'enterprise': '',
+            'enterprise_name': '',
             'netmask': '',
-            'network_address': ''
+            'network_address': '',
+            'password': '',
+            'route_distinguisher': '',
+            'route_target': '',
+            'subnet_name': '',
+            'username': '',
+            'vm_ip': '',
+            'vm_mac': '',
+            'vm_name': '',
+            'vm_uuid': '',
+            'vport_name': '',
+            'zone_name': '',
         }
 
     if args.verbose:
