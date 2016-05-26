@@ -48,7 +48,6 @@ import logging
 
 
 class NUSplitActivation:
-    """ Represents Gluon port. """
 
     def __init__(self, config):
         for k, v in config.items():
