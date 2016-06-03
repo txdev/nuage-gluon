@@ -31,12 +31,17 @@ Gluon shim layer for handling etcd messages
 import etcd
 import logging
 import json
+import sys
+
+from Queue import Queue
+from threading import Thread
 
 from nuage.vm_split_activation import NUSplitActivation
 
+client = None
 prev_mod_index = 0
 vm_status = {}
-
+proton_etcd_dir = '/net-l3vpn/proton'
 
 def notify_proton_vif(proton, uuid, vif_type):
     path = proton + '/controller/port/' + uuid
@@ -50,6 +55,33 @@ def notify_proton_status(proton, uuid, status):
     client.write(path, json.dumps(data))
 
 
+def initialize_worker_thread(messages_queue):
+    worker = Thread(target=process_queue, args=(messages_queue,))
+    worker.setDaemon(True)
+    worker.start()
+
+    return worker
+
+
+def compute_network_addr(ip, prefix):
+    """
+    return network address
+    """
+
+    addr = ip.split('.')
+    prefix = int(prefix)
+
+    mask = [0, 0, 0, 0]
+    for i in range(prefix):
+        mask[i / 8] += (1 << (7 - i % 8))
+
+    net = []
+    for i in range(4):
+        net.append(int(addr[i]) & mask[i])
+
+    return '.'.join(str(e) for e in net)
+
+
 def activate_vm(data):
 
     config = {
@@ -58,7 +90,7 @@ def activate_vm(data):
         'enterprise': 'csp',
         'enterprise_name': '',
         'netmask': '',
-        'network_address': '',
+        'network_address': compute_network_addr(data.ipaddress, data.prefix),
         'password': '',
         'route_distinguisher': '',
         'route_target': '',
@@ -76,6 +108,11 @@ def activate_vm(data):
     return sa.activate()
 
 
+def get_vpn_info(uuid):
+    vpn_info = client.read('/protonbaseport/vpn')
+    return vpn_info
+
+
 def process_port_model(message, uuid, proton_name):
     global vm_status
     action = message.action
@@ -87,12 +124,13 @@ def process_port_model(message, uuid, proton_name):
         if uuid in vm_status and vm_status[uuid] == 'pending':
             return
 
-        value = json.loads(message.value)
         notify_proton_status(proton_name, uuid, 'pending')
 
         vm_status[uuid] = 'pending'
 
-        if activate_vm(json.loads(message.value)):
+        vpn_info = get_vpn_info(uuid)
+
+        if activate_vm(json.loads(message.value), vpn_info):
             notify_proton_status(proton_name, uuid, 'up')
             vm_status[uuid] = 'pending'
             return
@@ -114,14 +152,18 @@ def process_port_model(message, uuid, proton_name):
         logging.error('unknown action %s' % action)
 
 
+def process_queue(messages_queue):
+    logging.info("processing queue")
+
+    while True:
+        item = messages_queue.get()
+        process_message(item)
+        messages_queue.task_done()
+
+
 def process_message(message):
 
-    global prev_mod_index, vm_status
     path = message.key.split('/')
-    mod_index = message.modifiedIndex
-
-    if mod_index > prev_mod_index + 1:
-        pass
 
     if len(path) < 5:
         logging.error("unknown message %s, ignoring" % message)
@@ -142,14 +184,34 @@ def process_message(message):
 def main():
     global client
     client = etcd.Client()
+    messages_queue = Queue()
+    initialize_worker_thread(messages_queue)
 
-    waitIndex = 0
+    wait_index = 0
 
     while True:
-        message = client.read('/net-l3vpn/proton', recursive=True, wait=True, waitIndex=waitIndex)
-        logging.info("message received %s" % message.value)
-        process_message(message)
-        waitIndex = message.modifiedIndex + 1
+
+        try:
+            if wait_index:
+                message = client.read(proton_etcd_dir, recursive=True, wait=True, waitIndex=wait_index)
+
+            else:
+                message = client.read(proton_etcd_dir, recursive=True, wait=True)
+
+            messages_queue.put(message.value)
+
+        except KeyboardInterrupt:
+            logging.info("exiting on interrupt")
+            exit(1)
+
+        except:
+            pass
+
+        if (message.modifiedIndex - wait_index) > 1000:
+            wait_index = 0
+
+        else:
+            wait_index = message.modifiedIndex + 1
 
 if __name__ == '__main__':
     main()
