@@ -29,9 +29,8 @@ Gluon shim layer for handling etcd messages
 """
 
 import etcd
-import logging
 import json
-import sys
+import logging
 
 from Queue import Queue
 from threading import Thread
@@ -42,6 +41,8 @@ client = None
 prev_mod_index = 0
 vm_status = {}
 proton_etcd_dir = '/net-l3vpn/proton'
+
+logger = logging.getLogger(__name__)
 
 def notify_proton_vif(proton, uuid, vif_type):
     path = proton + '/controller/port/' + uuid
@@ -136,24 +137,22 @@ def process_port_model(message, uuid, proton_name):
             return
 
         else:
-            logging.error("failed activating vm")
+            logger.error("failed activating vm")
             return
 
         if uuid in vm_status and vm_status[uuid] == 'unbound':
             notify_proton_status(proton_name, uuid, 'pending')
             pass
 
-        value = json.loads(message.value)
-
     elif action == 'delete':
         pass
 
     else:
-        logging.error('unknown action %s' % action)
+        logger.error('unknown action %s' % action)
 
 
 def process_queue(messages_queue):
-    logging.info("processing queue")
+    logger.info("processing queue")
 
     while True:
         item = messages_queue.get()
@@ -166,7 +165,7 @@ def process_message(message):
     path = message.key.split('/')
 
     if len(path) < 5:
-        logging.error("unknown message %s, ignoring" % message)
+        logger.error("unknown message %s, ignoring" % message)
         return
 
     proton_name = path[1]
@@ -177,21 +176,28 @@ def process_message(message):
         process_port_model(message, uuid, proton_name)
 
     else:
-        logging.error('unrecognized table %s' % table)
+        logger.error('unrecognized table %s' % table)
         return
 
 
 def main():
     global client
-    client = etcd.Client()
     messages_queue = Queue()
     initialize_worker_thread(messages_queue)
+    client = etcd.Client()
+
+    ch = logging.StreamHandler()
+    ch.setLevel(logging.INFO)
+
+    logger.addHandler(ch)
 
     wait_index = 0
 
     while True:
 
         try:
+            logger.info("watching %s" % proton_etcd_dir)
+
             if wait_index:
                 message = client.read(proton_etcd_dir, recursive=True, wait=True, waitIndex=wait_index)
 
@@ -200,18 +206,22 @@ def main():
 
             messages_queue.put(message.value)
 
+            if (message.modifiedIndex - wait_index) > 1000:
+                wait_index = 0
+
+            else:
+                wait_index = message.modifiedIndex + 1
+
+        except etcd.EtcdException:
+            logger.error("cannot connect to etcd, make sure that etcd is running")
+            exit(1)
+
         except KeyboardInterrupt:
-            logging.info("exiting on interrupt")
+            logger.info("exiting on interrupt")
             exit(1)
 
         except:
             pass
-
-        if (message.modifiedIndex - wait_index) > 1000:
-            wait_index = 0
-
-        else:
-            wait_index = message.modifiedIndex + 1
 
 if __name__ == '__main__':
     main()

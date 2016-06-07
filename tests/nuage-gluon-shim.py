@@ -1,6 +1,6 @@
 import unittest
 
-from nuage_gluon_shim import compute_network_addr
+from nuage.nuage_gluon_shim import compute_network_addr
 
 class MyTestCase(unittest.TestCase):
     def test_something(self):

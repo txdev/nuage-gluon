@@ -61,7 +61,78 @@ class NUSplitActivation:
         self.session.start()
 
     def activate(self):
-        """activate vm.
+        """activate a VM
+        """
+
+        # get enterprise
+        enterprise = self.session.user.enterprises.get_first(filter='name == "%s"' % self.enterprise_name)
+
+        if enterprise is None:
+            logging.critical("Enterprise %s not found, exiting" % enterprise)
+            print "can't find enterprise"
+            return False
+
+        # get domains
+        enterprise.domains.fetch()
+
+        domain = next((domain for domain in enterprise.domains if
+                       domain.route_distinguisher == self.route_distinguisher and domain.route_target == self.route_target), None)
+
+        if domain is None:
+            logging.info("Domain %s not found, creating domain" % self.domain_name)
+
+            domain = vsdk.NUDomain(name=self.domain_name, template_id=self.domain_template_id)
+            enterprise.create_child(domain)
+
+        # get zone
+        zone = domain.zones.get_first(filter='name == "%s"' % self.zone_name)
+
+        if zone is None:
+            logging.info("Zone %s not found, creating zone" % self.zone_name)
+
+            zone = vsdk.NUZone(name=self.zone_name)
+            domain.create_child(zone)
+
+        # get subnet
+        subnet = zone.subnets.get_first(filter='address == "%s"' % self.network_address)
+
+        if subnet is None:
+            logging.info("Subnet %s not found, creating subnet" % self.subnet_name)
+
+            subnet = vsdk.NUSubnet(name=self.subnet_name, address=self.network_address,
+                                       netmask=self.netmask)
+            zone.create_child(subnet)
+
+        # get vport
+        vport = subnet.vports.get_first(filter='name == "%s"' % self.vport_name)
+
+        if vport is None:
+            # create vport
+            logging.info("Vport %s is not found, creating Vport" % self.vport_name)
+
+            vport = vsdk.NUVPort(name=self.vport_name, address_spoofing='INHERITED', type='VM',
+                                     description='Automatically created, do not edit.')
+            subnet.create_child(vport)
+
+        # get vm
+        vm = self.session.user.fetcher_for_rest_name('vm').get('uuid=="%s"' % self.vm_uuid)
+
+        if not vm:
+            logging.info("VM %s is not found, creating VM" % self.vm_name)
+
+            vm = vsdk.NUVM(name=self.vm_name, uuid=self.vm_uuid, interfaces=[{
+                'name': self.vm_name,
+                'VPortID': vport.id,
+                'MAC': self.vm_mac,
+                'IPAddress': self.vm_ip
+            }])
+
+            self.session.user.create_child(vm)
+
+        return True
+
+    def activate_by_name(self):
+        """activate vm. Uses names to identify domain, subnet, and vm
         """
 
         # get enterprise
@@ -112,11 +183,11 @@ class NUSplitActivation:
             subnet.create_child(vport)
 
         # get vm
-        #vm = self.session.vms.get_first(filter='name == "%s"' % self.vm_name)
-        vm = self.session.user.fetcher_for_rest_name('vm').get('name=="%s"' % self.vm_name)
+        vm = self.session.user.vms.get_first(filter='name == "%s"' % self.vm_name)
+        #vm = self.session.user.fetcher_for_rest_name('vm').get('name=="%s"' % self.vm_name)
 
         if not vm:
-            logging.info("VM %s is not found, creating Vport" % self.vm_name)
+            logging.info("VM %s is not found, creating VM" % self.vm_name)
 
             vm = vsdk.NUVM(name=self.vm_name, uuid=self.vm_uuid, interfaces=[{
                 'name': self.vm_name,
