@@ -83,29 +83,44 @@ def compute_network_addr(ip, prefix):
     return '.'.join(str(e) for e in net)
 
 
-def activate_vm(data):
+def compute_netmask(prefix):
+    """
+    return netmask
+    :param prefix:
+    :return:
+    """
+    prefix = int(prefix)
+
+    mask = [0, 0, 0, 0]
+    for i in range(prefix):
+        mask[i / 8] += (1 << (7 - i % 8))
+
+    return '.'.join(str(e) for e in mask)
+
+
+def activate_vm(data, vpn_info):
 
     config = {
         'api_url': 'https://10.2.0.30:8443',
-        'domain_name': '',
+        'domain_name': 'GluonDomain',
         'enterprise': 'csp',
-        'enterprise_name': '',
-        'netmask': '',
+        'enterprise_name': 'GluonEnt',
+        'netmask': compute_netmask(data.prefix),
         'network_address': compute_network_addr(data.ipaddress, data.prefix),
         'password': '',
-        'route_distinguisher': '',
-        'route_target': '',
-        'subnet_name': '',
-        'username': '',
+        'route_distinguisher': vpn_info.route_distinguisher,
+        'route_target': vpn_info.route_target,
+        'subnet_name': 'Gluon_Subnet',
+        'username': 'csproot',
         'vm_ip': data['ipaddress'],
-        'vm_mac': '',
-        'vm_name': '',
-        'vm_uuid': data['uuid'],
-        'vport_name': '',
-        'zone_name': '',
+        'vm_mac': data['mac_address'],
+        'vm_name': data['vm_id'],
+        'vm_uuid': data['vm_id'],
+        'vport_name': 'vport1',
+        'zone_name': 'GluonZone',
     }
 
-    sa = NUSplitActivation()
+    sa = NUSplitActivation(config)
     return sa.activate()
 
 
@@ -133,7 +148,7 @@ def process_port_model(message, uuid, proton_name):
 
         if activate_vm(json.loads(message.value), vpn_info):
             notify_proton_status(proton_name, uuid, 'up')
-            vm_status[uuid] = 'pending'
+            vm_status[uuid] = 'up'
             return
 
         else:
