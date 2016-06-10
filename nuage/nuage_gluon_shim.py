@@ -244,7 +244,7 @@ def getargs():
 
     parser.add_argument('-d', '--debug', required=False, help='Enable debug output', dest='debug',
                         action='store_true')
-    parser.add_argument('-h', '--host-name', required=False, help='etcd hostname or ip, default to localhost',
+    parser.add_argument('-H', '--host-name', required=False, help='etcd hostname or ip, default to localhost',
                         dest='etcd_host', type=str)
     parser.add_argument('-p', '--port', required=False, help='etcd port number, default to 4001', dest='verbose',
                         action='store_true')
@@ -267,10 +267,10 @@ def main():
         etcd_host = 'localhost'
 
     if args.etcd_host:
-        etcd_port = args.etcd_port
+        etcd_port = int(args.etcd_port)
 
     else:
-        etcd_port = '4001'
+        etcd_port = 4001
 
     messages_queue = Queue()
     initialize_worker_thread(messages_queue)
