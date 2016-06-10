@@ -124,37 +124,43 @@ def activate_vm(data, vpn_info):
     return sa.activate()
 
 
-def get_vpn_info(uuid):
+def get_vpn_info(client, uuid):
     vpn_info = {}
-    vpn_port = client.read(proton_etcd_dir + '/VPNPort/' + uuid)
 
-    if not vpn_port:
-        logging.error("vpn port is empty for uuid %s" % uuid)
-        return False
+    try:
+        vpn_port = json.loads(client.get(proton_etcd_dir + '/VPNPort/' + uuid).value)
+        print vpn_port["vpn_instance"]
 
-    else:
-        vpn_instance = client.read(proton_etcd_dir + '/VpnInstance/' + vpn_port.vpn_instance)
-
-        if not vpn_instance:
-            vpn_info['route_distinguisher'] = vpn_instance.route_distinguishers
-
-            vpn_afconfig = client.read(proton_etcd_dir + '/VpnAfConfig/' + vpn_instance.ipv4_family)
-
-            if not vpn_afconfig:
-                vpn_info['route_target'] = vpn_instance.vrf_rt_value
-
-            else:
-                logging.error("vpnafconfig is empty for uuid %s" % uuid)
-
-        else:
-            logging.error("vpn instance is empty for uuid %s" % uuid)
+        if not vpn_port:
+            logging.error("vpn port is empty for uuid %s" % uuid)
             return False
 
-    vpn_info = client.read('/protonbaseport/vpn')
+        else:
+            vpn_instance = json.loads(client.get(proton_etcd_dir + '/VpnInstance/' + vpn_port['vpn_instance']).value)
+
+            if vpn_instance:
+                vpn_info['route_distinguisher'] = vpn_instance['route_distinguishers']
+
+                vpn_afconfig = json.loads(client.get(proton_etcd_dir + '/VpnAfConfig/' + vpn_instance['ipv4_family']).value)
+
+                if vpn_afconfig:
+                    vpn_info['route_target'] = vpn_afconfig['vrf_rt_value']
+
+                else:
+                    logging.error("vpnafconfig is empty for uuid %s" % uuid)
+
+            else:
+                logging.error("vpn instance is empty for %s" % vpn_port['vpn_instance'])
+                return False
+
+    except etcd.EtcdKeyNotFound:
+        return False
+
     return vpn_info
 
 
 def process_port_model(message, uuid, proton_name):
+    global client
     global vm_status
     action = message.action
 
