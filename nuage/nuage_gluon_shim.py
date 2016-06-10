@@ -114,7 +114,7 @@ def activate_vm(data, vpn_info):
         'username': 'csproot',
         'vm_ip': data['ipaddress'],
         'vm_mac': data['mac_address'],
-        'vm_name': data['vm_id'],
+        'vm_name': data['vm_id'],  ## uuid of the VM
         'vm_uuid': data['vm_id'],
         'vport_name': 'vport1',
         'zone_name': 'GluonZone',
@@ -125,6 +125,31 @@ def activate_vm(data, vpn_info):
 
 
 def get_vpn_info(uuid):
+    vpn_info = {}
+    vpn_port = client.read(proton_etcd_dir + '/VPNPort/' + uuid)
+
+    if not vpn_port:
+        logging.error("vpn port is empty for uuid %s" % uuid)
+        return False
+
+    else:
+        vpn_instance = client.read(proton_etcd_dir + '/VpnInstance/' + vpn_port.vpn_instance)
+
+        if not vpn_instance:
+            vpn_info['route_distinguisher'] = vpn_instance.route_distinguishers
+
+            vpn_afconfig = client.read(proton_etcd_dir + '/VpnAfConfig/' + vpn_instance.ipv4_family)
+
+            if not vpn_afconfig:
+                vpn_info['route_target'] = vpn_instance.vrf_rt_value
+
+            else:
+                logging.error("vpnafconfig is empty for uuid %s" % uuid)
+
+        else:
+            logging.error("vpn instance is empty for uuid %s" % uuid)
+            return False
+
     vpn_info = client.read('/protonbaseport/vpn')
     return vpn_info
 
