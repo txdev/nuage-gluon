@@ -33,8 +33,9 @@ import os
 import json
 import argparse
 
-from oslo_log import log as logging
-from oslo_config import cfg
+#from oslo_log import log as logging
+#from oslo_config import cfg
+import logging
 
 from Queue import Queue
 from threading import Thread
@@ -255,7 +256,8 @@ def getargs():
 
 def main():
     global client
-    cfg.CONF.log_opt_values(logger, logging.DEBUG)
+    #cfg.CONF.log_opt_values(logger, logging.DEBUG)
+    logging.basicConfig(level=logging.DEBUG)
     logger.info('Starting server in PID %s' % os.getpid())
 
     args = getargs()
