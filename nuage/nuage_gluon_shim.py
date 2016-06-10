@@ -29,8 +29,12 @@ Gluon shim layer for handling etcd messages
 """
 
 import etcd
+import os
 import json
-import logging
+import argparse
+
+from oslo_log import log as logging
+from oslo_config import cfg
 
 from Queue import Queue
 from threading import Thread
@@ -40,6 +44,9 @@ from nuage.vm_split_activation import NUSplitActivation
 client = None
 prev_mod_index = 0
 vm_status = {}
+
+valid_host_ids = ('host1', 'host2', 'host3')
+
 proton_etcd_dir = '/net-l3vpn/proton'
 
 logger = logging.getLogger(__name__)
@@ -129,7 +136,6 @@ def get_vpn_info(client, uuid):
 
     try:
         vpn_port = json.loads(client.get(proton_etcd_dir + '/VPNPort/' + uuid).value)
-        print vpn_port["vpn_instance"]
 
         if not vpn_port:
             logging.error("vpn port is empty for uuid %s" % uuid)
@@ -159,15 +165,23 @@ def get_vpn_info(client, uuid):
     return vpn_info
 
 
-def process_port_model(message, uuid, proton_name):
+def process_base_port_model(message, uuid, proton_name):
     global client
     global vm_status
+    global valid_host_ids
+
     action = message.action
 
     if action == 'set':
         pass
 
     elif action == 'update':
+        message_value = json.loads(message.value)
+
+        if not message_value['hostid'] in valid_host_ids:
+            logging.info("host id %s is not recognized", message_value['hostid'])
+            return
+
         if uuid in vm_status and vm_status[uuid] == 'pending':
             return
 
@@ -219,23 +233,48 @@ def process_message(message):
     uuid = path[3]
 
     if table == 'ProtonBasePort':
-        process_port_model(message, uuid, proton_name)
+        process_base_port_model(message, uuid, proton_name)
 
     else:
         logger.error('unrecognized table %s' % table)
         return
 
+def getargs():
+    parser = argparse.ArgumentParser(description='Start Shim Layer')
+
+    parser.add_argument('-d', '--debug', required=False, help='Enable debug output', dest='debug',
+                        action='store_true')
+    parser.add_argument('-h', '--host-name', required=False, help='etcd hostname or ip, default to localhost',
+                        dest='etcd_host', type=str)
+    parser.add_argument('-p', '--port', required=False, help='etcd port number, default to 4001', dest='verbose',
+                        action='store_true')
+
+    args = parser.parse_args()
+    return args
+
 
 def main():
     global client
+    cfg.CONF.log_opt_values(logger, logging.DEBUG)
+    logger.info('Starting server in PID %s' % os.getpid())
+
+    args = getargs()
+
+    if args.etcd_host:
+        etcd_host = args.etcd_host
+
+    else:
+        etcd_host = 'localhost'
+
+    if args.etcd_host:
+        etcd_port = args.etcd_port
+
+    else:
+        etcd_port = '4001'
+
     messages_queue = Queue()
     initialize_worker_thread(messages_queue)
-    client = etcd.Client()
-
-    ch = logging.StreamHandler()
-    ch.setLevel(logging.INFO)
-
-    logger.addHandler(ch)
+    client = etcd.Client(host=etcd_host, port=etcd_port)
 
     wait_index = 0
 
