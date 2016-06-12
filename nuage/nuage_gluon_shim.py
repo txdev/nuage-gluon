@@ -52,14 +52,15 @@ proton_etcd_dir = '/net-l3vpn/proton'
 
 logger = logging.getLogger(__name__)
 
+
 def notify_proton_vif(proton, uuid, vif_type):
-    path = proton + '/controller/port/' + uuid
+    path = proton + '/controller/host/' + uuid
     data = {"status": vif_type}
     client.write(path, json.dumps(data))
 
 
 def notify_proton_status(proton, uuid, status):
-    path = proton + '/controller/host/' + uuid
+    path = proton + '/controller/port/' + uuid
     data = {"status": status}
     client.write(path, json.dumps(data))
 
@@ -179,8 +180,8 @@ def process_base_port_model(message, uuid, proton_name):
     elif action == 'update':
         message_value = json.loads(message.value)
 
-        if not message_value['hostid'] in valid_host_ids:
-            logging.info("host id %s is not recognized", message_value['hostid'])
+        if not message_value['host_id'] in valid_host_ids:
+            logging.info("host id %s is not recognized", message_value['host_id'])
             return
 
         if uuid in vm_status and vm_status[uuid] == 'pending':
