@@ -84,7 +84,9 @@ class NUSplitActivation:
 
             domain = vsdk.NUDomain(name=self.domain_name, tunnel_type='GRE',
                                    route_distinguisher= self.route_distinguisher, route_target=self.route_target,
-                                   template_id=self.domain_template_id)
+                                    back_haul_route_target='20000:20000',
+                                    back_haul_route_distinguisher='20000:20000',
+                                    back_haul_vnid='25000', template_id=self.domain_template_id)
             enterprise.create_child(domain)
 
         # get zone
