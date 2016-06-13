@@ -111,7 +111,7 @@ def activate_vm(data, vpn_info):
 
     config = {
         'api_url': 'https://10.2.0.30:8443',
-        'domain_name': 'GluonDomainGRE',
+        'domain_name': vpn_info['name'],
         'enterprise': 'csp',
         'enterprise_name': 'Gluon',
         'netmask': compute_netmask(data.prefix),
@@ -123,8 +123,8 @@ def activate_vm(data, vpn_info):
         'username': 'csproot',
         'vm_ip': data['ipaddress'],
         'vm_mac': data['mac_address'],
-        'vm_name': data['vm_id'],  ## uuid of the VM
-        'vm_uuid': data['vm_id'],
+        'vm_name': data['device_id'],  ## uuid of the VM
+        'vm_uuid': data['device_id'],
         'vport_name': data['id'],
         'zone_name': 'Zone0',
     }
@@ -148,6 +148,7 @@ def get_vpn_info(client, uuid):
 
             if vpn_instance:
                 vpn_info['route_distinguisher'] = vpn_instance['route_distinguishers']
+                vpn_info['name'] = vpn_instance['name']
 
                 vpn_afconfig = json.loads(client.get(proton_etcd_dir + '/VpnAfConfig/' + vpn_instance['ipv4_family']).value)
 
