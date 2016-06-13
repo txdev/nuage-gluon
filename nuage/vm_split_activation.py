@@ -48,6 +48,7 @@ import logging
 
 
 class NUSplitActivation:
+    domain_template_id = 'cc67f3c3-7c32-4967-b090-6691a09c2777'
 
     def __init__(self, config):
         for k, v in config.items():

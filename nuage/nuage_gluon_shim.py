@@ -111,22 +111,22 @@ def activate_vm(data, vpn_info):
 
     config = {
         'api_url': 'https://10.2.0.30:8443',
-        'domain_name': 'GluonDomain',
+        'domain_name': 'GluonDomainGRE',
         'enterprise': 'csp',
-        'enterprise_name': 'GluonEnt',
+        'enterprise_name': 'Gluon',
         'netmask': compute_netmask(data.prefix),
         'network_address': compute_network_addr(data.ipaddress, data.prefix),
-        'password': '',
-        'route_distinguisher': vpn_info.route_distinguisher,
-        'route_target': vpn_info.route_target,
-        'subnet_name': 'Gluon_Subnet',
+        'password': 'csproot',
+        'route_distinguisher': vpn_info["route_distinguisher"],
+        'route_target': vpn_info["route_target"],
+        'subnet_name': 'Subnet0',
         'username': 'csproot',
         'vm_ip': data['ipaddress'],
         'vm_mac': data['mac_address'],
         'vm_name': data['vm_id'],  ## uuid of the VM
         'vm_uuid': data['vm_id'],
-        'vport_name': 'vport1',
-        'zone_name': 'GluonZone',
+        'vport_name': data['id'],
+        'zone_name': 'Zone0',
     }
 
     sa = NUSplitActivation(config)
@@ -191,7 +191,7 @@ def process_base_port_model(message, uuid, proton_name):
 
         vm_status[uuid] = 'pending'
 
-        vpn_info = get_vpn_info(uuid)
+        vpn_info = get_vpn_info(client, uuid)
 
         if activate_vm(json.loads(message.value), vpn_info):
             notify_proton_status(proton_name, uuid, 'up')
@@ -202,6 +202,7 @@ def process_base_port_model(message, uuid, proton_name):
             logger.error("failed activating vm")
             return
 
+        # check if need this
         if uuid in vm_status and vm_status[uuid] == 'unbound':
             notify_proton_status(proton_name, uuid, 'pending')
             pass
