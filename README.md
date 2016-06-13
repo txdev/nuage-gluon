@@ -9,6 +9,15 @@ Following VSD objects are created if they don't already exist.
 	VPort
 	VM
 
+## Setting up the environment
+
+The commands have to be run under a virtualenv environment
+
+    apt-get install python-virtualenv
+    virtual-env vspk-env
+    cd vspk-env
+    source bin/activate
+    
 ## Usage
 ### NUSplitActivation class
 
