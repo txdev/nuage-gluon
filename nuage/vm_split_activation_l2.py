@@ -109,7 +109,7 @@ class NUSplitActivationL2:
 
             vport = vsdk.NUVPort(name=self.vport_name, address_spoofing='INHERITED', type='VM',
                                      description='Automatically created, do not edit.')
-            domain.add_child(vport)
+            domain.create_child(vport)
 
         # get vm
         vm = self.session.user.fetcher_for_rest_name('vm').get('uuid=="%s"' % self.vm_uuid)
