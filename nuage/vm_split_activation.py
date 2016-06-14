@@ -61,6 +61,15 @@ class NUSplitActivation:
             self.username, self.password, self.enterprise, self.api_url))
         self.session.start()
 
+    def deactivate(self):
+        """
+        deactivate VM
+        :return:
+        """
+        vm = self.session.user.fetcher_for_rest_name('vm').get('uuid=="%s"' % self.vm_uuid)
+
+        return vm.delete()
+
     def activate(self):
         """activate a VM
         """
@@ -213,6 +222,8 @@ def getargs():
                         action='store_true')
     parser.add_argument('-c', '--config-file', required=False, help='configuration file',
                         dest='config_file', type=str)
+    parser.add_argument('-r', '--remove', required=False, help='deactivate VM',
+                        dest='deactivate', action='store_true')
     parser.add_argument('-v', '--verbose', required=False, help='Enable verbose output', dest='verbose',
                         action='store_true')
 
@@ -276,11 +287,18 @@ def main():
 
     gp = NUSplitActivation(config)
 
-    if gp.activate():
-        logging.info('VM successfully activated')
+    if args.deactivate:
+        if gp.deactivate():
+            logging.info('VM successfully deactivated')
 
+        else:
+            logging.info("VM deactivation failed")
     else:
-        logging.info("VM activation failed")
+        if gp.activate():
+            logging.info('VM successfully activated')
+
+        else:
+            logging.info("VM activation failed")
 
 if __name__ == "__main__":
     main()

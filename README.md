@@ -7,6 +7,7 @@ Following VSD objects are created if they don't already exist.
 	Zone
 	Subnet
 	VPort
+	rayh
 	VM
 
 ## Setting up the environment
