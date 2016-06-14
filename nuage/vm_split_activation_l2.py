@@ -98,6 +98,9 @@ class NUSplitActivationL2:
             # update domain with the right values
             domain.route_distinguisher=self.route_distinguisher
             domain.route_target=self.route_target
+            domain.address=self.vm_ip
+            domain.netmask=self.netmask
+            domain.dhcp_managed=True
             domain.save()
 
         # get vport
