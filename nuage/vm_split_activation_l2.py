@@ -268,7 +268,7 @@ def main():
 
     logging.basicConfig(level=log_level)
 
-    gp = NUSplitActivation(config)
+    gp = NUSplitActivationL2(config)
 
     if args.deactivate:
         if gp.deactivate():
