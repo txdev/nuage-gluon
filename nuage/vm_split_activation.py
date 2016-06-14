@@ -93,9 +93,7 @@ class NUSplitActivation:
 
             domain = vsdk.NUDomain(name=self.domain_name, tunnel_type=self.tunnel_type,
                                    route_distinguisher=self.route_distinguisher, route_target=self.route_target,
-                                    back_haul_route_target='20000:20000',
-                                    back_haul_route_distinguisher='20000:20000',
-                                    back_haul_vnid='25000', template_id=self.domain_template_id)
+                                    template_id=self.domain_template_id)
             enterprise.create_child(domain)
 
             # update domain with the right values
