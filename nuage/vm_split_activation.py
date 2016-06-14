@@ -91,7 +91,7 @@ class NUSplitActivation:
         if domain is None:
             logging.info("Domain %s not found, creating domain" % self.domain_name)
 
-            domain = vsdk.NUDomain(name=self.domain_name, tunnel_type='GRE',
+            domain = vsdk.NUDomain(name=self.domain_name, tunnel_type=self.tunnel_type,
                                    route_distinguisher= self.route_distinguisher, route_target=self.route_target,
                                     back_haul_route_target='20000:20000',
                                     back_haul_route_distinguisher='20000:20000',

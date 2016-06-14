@@ -127,6 +127,7 @@ def activate_vm(data, vpn_info):
         'vm_uuid': data['device_id'],
         'vport_name': data['id'],
         'zone_name': 'Zone0',
+        'tunnel_type' : 'GRE'
     }
 
     sa = NUSplitActivation(config)
