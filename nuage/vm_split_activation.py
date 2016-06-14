@@ -91,12 +91,14 @@ class NUSplitActivation:
         if domain is None:
             logging.info("Domain %s not found, creating domain" % self.domain_name)
 
-            domain = vsdk.NUDomain(name=self.domain_name, tunnel_type=self.tunnel_type,
-                                   route_distinguisher=self.route_distinguisher, route_target=self.route_target,
+            domain = vsdk.NUDomain(name=self.domain_name,
                                     template_id=self.domain_template_id)
             enterprise.create_child(domain)
 
             # update domain with the right values
+            domain.tunnel_type=self.tunnel_type
+            domain.route_distinguisher=self.route_distinguisher
+            domain.route_target=self.route_target
             domain.back_haul_route_target='20000:20000'
             domain.back_haul_route_distinguisher='20000:20000'
             domain.back_haul_vnid='25000'
