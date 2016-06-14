@@ -83,9 +83,9 @@ class NUSplitActivationL2:
             return False
 
         # get domains
-        enterprise.domains.fetch()
+        enterprise.l2_domains.fetch()
 
-        domain = next((domain for domain in enterprise.domains if
+        domain = next((domain for domain in enterprise.l2_domains if
                        domain.route_distinguisher == self.route_distinguisher and domain.route_target == self.route_target), None)
 
         if domain is None:
