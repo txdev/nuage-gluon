@@ -45,6 +45,7 @@ import ConfigParser
 
 from vspk import v3_2 as vsdk
 import logging
+logger = logging.getLogger(__name__)
 
 
 class NUSplitActivation:
@@ -57,7 +58,7 @@ class NUSplitActivation:
         self.session = vsdk.NUVSDSession(username=self.username, password=self.password,
                                          enterprise=self.enterprise, api_url=self.api_url)
 
-        logging.info("starting session username: %s, password: %s, enterprise: %s, api_url: %s" % (
+        logger.info("starting session username: %s, password: %s, enterprise: %s, api_url: %s" % (
             self.username, self.password, self.enterprise, self.api_url))
         self.session.start()
 
@@ -78,7 +79,7 @@ class NUSplitActivation:
         enterprise = self.session.user.enterprises.get_first(filter='name == "%s"' % self.enterprise_name)
 
         if enterprise is None:
-            logging.critical("Enterprise %s not found, exiting" % enterprise)
+            logger.critical("Enterprise %s not found, exiting" % enterprise)
             print "can't find enterprise"
             return False
 
@@ -89,7 +90,7 @@ class NUSplitActivation:
                        domain.route_distinguisher == self.route_distinguisher and domain.route_target == self.route_target), None)
 
         if domain is None:
-            logging.info("Domain %s not found, creating domain" % self.domain_name)
+            logger.info("Domain %s not found, creating domain" % self.domain_name)
 
             domain = vsdk.NUDomain(name=self.domain_name,
                                    template_id=self.domain_template_id)
@@ -108,7 +109,7 @@ class NUSplitActivation:
         zone = domain.zones.get_first(filter='name == "%s"' % self.zone_name)
 
         if zone is None:
-            logging.info("Zone %s not found, creating zone" % self.zone_name)
+            logger.info("Zone %s not found, creating zone" % self.zone_name)
 
             zone = vsdk.NUZone(name=self.zone_name)
             domain.create_child(zone)
@@ -117,7 +118,7 @@ class NUSplitActivation:
         subnet = zone.subnets.get_first(filter='address == "%s"' % self.network_address)
 
         if subnet is None:
-            logging.info("Subnet %s not found, creating subnet" % self.subnet_name)
+            logger.info("Subnet %s not found, creating subnet" % self.subnet_name)
 
             subnet = vsdk.NUSubnet(name=self.subnet_name, address=self.network_address,
                                    netmask=self.netmask)
@@ -128,7 +129,7 @@ class NUSplitActivation:
 
         if vport is None:
             # create vport
-            logging.info("Vport %s is not found, creating Vport" % self.vport_name)
+            logger.info("Vport %s is not found, creating Vport" % self.vport_name)
 
             vport = vsdk.NUVPort(name=self.vport_name, address_spoofing='INHERITED', type='VM',
                                  description='Automatically created, do not edit.')
@@ -138,7 +139,7 @@ class NUSplitActivation:
         vm = self.session.user.fetcher_for_rest_name('vm').get('uuid=="%s"' % self.vm_uuid)
 
         if not vm:
-            logging.info("VM %s is not found, creating VM" % self.vm_name)
+            logger.info("VM %s is not found, creating VM" % self.vm_name)
 
             vm = vsdk.NUVM(name=self.vm_name, uuid=self.vm_uuid, interfaces=[{
                 'name': self.vm_name,
@@ -159,7 +160,7 @@ class NUSplitActivation:
         enterprise = self.session.user.enterprises.get_first(filter='name == "%s"' % self.enterprise_name)
 
         if enterprise is None:
-            logging.critical("Enterprise %s not found, exiting" % enterprise)
+            logger.critical("Enterprise %s not found, exiting" % enterprise)
             print "can't find enterprise"
             return False
 
@@ -167,7 +168,7 @@ class NUSplitActivation:
         domain = enterprise.domains.get_first(filter='name == "%s"' % self.domain_name)
 
         if domain is None:
-            logging.info("Domain %s not found, creating domain" % self.domain_name)
+            logger.info("Domain %s not found, creating domain" % self.domain_name)
 
             domain = vsdk.NUDomain(name=self.domain_name, route_target=self.route_target, route_distinguisher=self.route_distinguisher, template_id=self.domain_template_id)
             enterprise.create_child(domain)
@@ -176,7 +177,7 @@ class NUSplitActivation:
         zone = domain.zones.get_first(filter='name == "%s"' % self.zone_name)
 
         if zone is None:
-            logging.info("Zone %s not found, creating zone" % self.zone_name)
+            logger.info("Zone %s not found, creating zone" % self.zone_name)
 
             zone = vsdk.NUZone(name=self.zone_name)
             domain.create_child(zone)
@@ -185,7 +186,7 @@ class NUSplitActivation:
         subnet = zone.subnets.get_first(filter='name == "%s"' % self.subnet_name)
 
         if subnet is None:
-            logging.info("Subnet %s not found, creating subnet" % self.subnet_name)
+            logger.info("Subnet %s not found, creating subnet" % self.subnet_name)
 
             subnet = vsdk.NUSubnet(name=self.subnet_name, address=self.network_address,
                                    netmask=self.netmask)
@@ -196,7 +197,7 @@ class NUSplitActivation:
 
         if vport is None:
             # create vport
-            logging.info("Vport %s is not found, creating Vport" % self.vport_name)
+            logger.info("Vport %s is not found, creating Vport" % self.vport_name)
 
             vport = vsdk.NUVPort(name=self.vport_name, address_spoofing='INHERITED', type='VM',
                                  description='Automatically created, do not edit.')
@@ -207,7 +208,7 @@ class NUSplitActivation:
         #vm = self.session.user.fetcher_for_rest_name('vm').get('name=="%s"' % self.vm_name)
 
         if not vm:
-            logging.info("VM %s is not found, creating VM" % self.vm_name)
+            logger.info("VM %s is not found, creating VM" % self.vm_name)
 
             vm = vsdk.NUVM(name=self.vm_name, uuid=self.vm_uuid, interfaces=[{
                 'name': self.vm_name,
@@ -248,7 +249,7 @@ def parse_config_file(config_file):
     for section in parser.sections():
         for name, value in parser.items(section):
             config[name] = value
-            logging.info("config key %s has value %s" % (name,value))
+            logger.info("config key %s has value %s" % (name,value))
 
     return config
 
@@ -289,22 +290,22 @@ def main():
     else:
         log_level = logging.WARNING
 
-    logging.basicConfig(level=log_level)
+    logger.setLevel(log_level)
 
     gp = NUSplitActivation(config)
 
     if args.deactivate:
         if gp.deactivate():
-            logging.info('VM successfully deactivated')
+            logger.info('VM successfully deactivated')
 
         else:
-            logging.info("VM deactivation failed")
+            logger.info("VM deactivation failed")
     else:
         if gp.activate():
-            logging.info('VM successfully activated')
+            logger.info('VM successfully activated')
 
         else:
-            logging.info("VM activation failed")
+            logger.info("VM activation failed")
 
 if __name__ == "__main__":
     main()

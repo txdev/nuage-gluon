@@ -281,7 +281,7 @@ def getargs():
 def main():
     global client
     #cfg.CONF.log_opt_values(logger, logging.DEBUG)
-    logging.basicConfig(level=logging.DEBUG)
+    logger.setLevel(logging.DEBUG)
     logger.info('Starting server in PID %s' % os.getpid())
 
     args = getargs()
