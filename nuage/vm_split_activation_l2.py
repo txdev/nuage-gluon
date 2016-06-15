@@ -98,7 +98,7 @@ class NUSplitActivationL2:
             # update domain with the right values
             domain.route_distinguisher=self.route_distinguisher
             domain.route_target=self.route_target
-            domain.address=self.vm_ip
+            #domain.address=self.vm_ip
             domain.netmask=self.netmask
             domain.vn_id='5000'
             domain.dhcp_managed=True
