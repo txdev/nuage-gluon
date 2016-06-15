@@ -49,7 +49,8 @@ client = None
 prev_mod_index = 0
 vm_status = {}
 
-valid_host_ids = ('cbserver5', 'host2', 'host3')
+#valid_host_ids = ('cbserver5', 'host2', 'host3')
+valid_host_ids = ('node23')
 
 proton_etcd_dir = '/net-l3vpn/proton'
 
