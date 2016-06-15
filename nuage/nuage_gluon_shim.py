@@ -111,7 +111,8 @@ def compute_netmask(prefix):
     print('Calculated mask = %s' % ret)
     return  ret
 
-def activate_vm(data, vpn_info):
+
+def bind_vm(data, vpn_info):
 
     subnet_name =  'Subnet' + str(time.clock())
     subnet_name = string.replace(subnet_name, '.', '-')
@@ -138,12 +139,28 @@ def activate_vm(data, vpn_info):
         'vm_name': data.get('device_id', ''),  ## uuid of the VM
         'vm_uuid': data.get('device_id',''),
         'vport_name': data.get('id', ''),
-        'zone_name': zone_name,
+        'zone_name': 'Zone0',
         'tunnel_type' : 'GRE'
     }
 
     sa = NUSplitActivation(config)
     return sa.activate()
+
+
+def unbind_vm(data, vpn_info):
+
+    config = {
+        'api_url': 'https://10.2.0.40:8443',
+        'domain_name': vpn_info['name'],
+        'enterprise': 'csp',
+        'username': 'csproot',
+        'password': 'csproot',
+        'vm_uuid': data.get('device_id', ''),
+        'vport_name': data.get('id', '')
+    }
+
+    sa = NUSplitActivation(config)
+    return sa.deactivate()
 
 
 def get_vpn_info(client, uuid):
@@ -210,7 +227,7 @@ def process_base_port_model(message, uuid, proton_name):
 
         vpn_info = get_vpn_info(client, uuid)
 
-        if activate_vm(json.loads(message.value), vpn_info):
+        if bind_vm(json.loads(message.value), vpn_info):
             notify_proton_status(proton_name, uuid, 'up')
             vm_status[uuid] = 'up'
             return
@@ -225,7 +242,10 @@ def process_base_port_model(message, uuid, proton_name):
             pass
 
     elif action == 'delete':
-        pass
+        if (vm_status[uuid] == 'up'):
+            vpn_info = get_vpn_info(client, uuid)
+            unbind_vm(json.loads(message.value), vpn_info)
+            return
 
     else:
         logger.error('unknown action %s' % action)

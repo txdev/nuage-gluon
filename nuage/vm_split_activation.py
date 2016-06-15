@@ -68,8 +68,15 @@ class NUSplitActivation:
         :return:
         """
         vm = self.session.user.vms.get_first(filter='UUID== "%s"' % self.vm_uuid)
+        vm.delete()
 
-        return vm.delete()
+        vport = vm.parent_object
+        vport.delete()
+
+        #vport = subnet.vports.get_first(filter='name == "%s"' % self.vport_name)
+        #vport.delete()
+
+        return
 
     def activate(self):
         """activate a VM
@@ -114,8 +121,12 @@ class NUSplitActivation:
             zone = vsdk.NUZone(name=self.zone_name)
             domain.create_child(zone)
 
+        zone.subnets.fetch()
+
+        subnet = next((subnet for subnet in zone.subnets if
+                       subnet.network_address == self.network_address and subnet.netmask == self.netmask), None)
         # get subnet
-        subnet = zone.subnets.get_first(filter='address == "%s"' % self.network_address)
+        # subnet = zone.subnets.get_first(filter='address == "%s"' % self.network_address)
 
         if subnet is None:
             logger.info("Subnet %s not found, creating subnet" % self.subnet_name)
