@@ -66,7 +66,7 @@ class NUSplitActivationL2:
         deactivate VM
         :return:
         """
-        vm = self.session.user.fetcher_for_rest_name('vm').get('uuid=="%s"' % self.vm_uuid)
+        vm = self.session.user.fetcher_for_rest_name('vm').get('UUID=="%s"' % self.vm_uuid)
 
         return vm.delete()
 
@@ -115,7 +115,7 @@ class NUSplitActivationL2:
             domain.create_child(vport)
 
         # get vm
-        vm = self.session.user.fetcher_for_rest_name('vm').get('uuid=="%s"' % self.vm_uuid)
+        vm = self.session.user.fetcher_for_rest_name('vm').get('UUID=="%s"' % self.vm_uuid)
 
         if not vm:
             logging.info("VM %s is not found, creating VM" % self.vm_name)
