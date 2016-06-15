@@ -125,7 +125,7 @@ def bind_vm(data, vpn_info):
     print('prefix = %s' % prefix)
 
     config = {
-        'api_url': 'https://10.2.0.40:8443',
+        'api_url': 'https://10.118.101.149:8443',
         'domain_name': vpn_info['name'],
         'enterprise': 'csp',
         'enterprise_name': 'Gluon',
@@ -152,7 +152,7 @@ def bind_vm(data, vpn_info):
 def unbind_vm(data, vpn_info):
 
     config = {
-        'api_url': 'https://10.2.0.40:8443',
+        'api_url': 'https://10.118.101.149:8443',
         'domain_name': vpn_info['name'],
         'enterprise': 'csp',
         'username': 'csproot',
