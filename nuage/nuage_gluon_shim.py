@@ -32,6 +32,9 @@ import etcd
 import os
 import json
 import argparse
+import urllib3
+import time
+import string
 
 #from oslo_log import log as logging
 #from oslo_config import cfg
@@ -46,7 +49,7 @@ client = None
 prev_mod_index = 0
 vm_status = {}
 
-valid_host_ids = ('host1', 'host2', 'host3')
+valid_host_ids = ('cbserver5', 'host2', 'host3')
 
 proton_etcd_dir = '/net-l3vpn/proton'
 
@@ -104,29 +107,38 @@ def compute_netmask(prefix):
     for i in range(prefix):
         mask[i / 8] += (1 << (7 - i % 8))
 
-    return '.'.join(str(e) for e in mask)
-
+    ret = '.'.join(str(e) for e in mask)
+    print('Calculated mask = %s' % ret)
+    return  ret
 
 def activate_vm(data, vpn_info):
 
+    subnet_name =  'Subnet' + str(time.clock())
+    subnet_name = string.replace(subnet_name, '.', '-')
+    zone_name =  'Zone' + str(time.clock())
+    zone_name = string.replace(zone_name, '.', '-')
+
+    prefix = data.get('subnet_prefix', '32')
+    print('prefix = %s' % prefix)
+
     config = {
-        'api_url': 'https://10.2.0.30:8443',
+        'api_url': 'https://10.2.0.40:8443',
         'domain_name': vpn_info['name'],
         'enterprise': 'csp',
         'enterprise_name': 'Gluon',
-        'netmask': compute_netmask(data.prefix),
-        'network_address': compute_network_addr(data.ipaddress, data.prefix),
+        'netmask': compute_netmask(prefix),
+        'network_address': compute_network_addr(data.get('ipaddress', ''), prefix),
         'password': 'csproot',
         'route_distinguisher': vpn_info["route_distinguisher"],
         'route_target': vpn_info["route_target"],
-        'subnet_name': 'Subnet0',
+        'subnet_name': subnet_name,
         'username': 'csproot',
-        'vm_ip': data['ipaddress'],
-        'vm_mac': data['mac_address'],
-        'vm_name': data['device_id'],  ## uuid of the VM
-        'vm_uuid': data['device_id'],
-        'vport_name': data['id'],
-        'zone_name': 'Zone0',
+        'vm_ip': data.get('ipaddress', ''),
+        'vm_mac': data.get('mac_address', ''),
+        'vm_name': data.get('device_id', ''),  ## uuid of the VM
+        'vm_uuid': data.get('device_id',''),
+        'vport_name': data.get('id', ''),
+        'zone_name': zone_name,
         'tunnel_type' : 'GRE'
     }
 
@@ -149,7 +161,7 @@ def get_vpn_info(client, uuid):
 
             if vpn_instance:
                 vpn_info['route_distinguisher'] = vpn_instance['route_distinguishers']
-                vpn_info['name'] = vpn_instance['name']
+                vpn_info['name'] = vpn_instance['vpn_instance_name']
 
                 vpn_afconfig = json.loads(client.get(proton_etcd_dir + '/VpnAfConfig/' + vpn_instance['ipv4_family']).value)
 
@@ -176,11 +188,14 @@ def process_base_port_model(message, uuid, proton_name):
 
     action = message.action
 
-    if action == 'set':
-        pass
-
-    elif action == 'update':
+    if action == 'set' or action == 'update':
         message_value = json.loads(message.value)
+
+        if message_value['host_id'] is None or message_value['host_id'] == '':
+            logging.info("host id is empty")
+            if vm_status.get(uuid, '') == 'up':
+                logging.info("Port is bound,  need to unbind: TODO")
+                return
 
         if not message_value['host_id'] in valid_host_ids:
             logging.info("host id %s is not recognized", message_value['host_id'])
@@ -227,6 +242,11 @@ def process_queue(messages_queue):
 
 def process_message(message):
 
+    logger.info("msg =  %s" % message)
+    #logger.info("msg.key =  %s" % message.key)
+    #logger.info("msg.value =  %s" % message.value)
+    #logger.info("msg.action =  %s" % message.action)
+
     path = message.key.split('/')
 
     if len(path) < 5:
@@ -234,8 +254,8 @@ def process_message(message):
         return
 
     proton_name = path[1]
-    table = path[2]
-    uuid = path[3]
+    table = path[3]
+    uuid = path[4]
 
     if table == 'ProtonBasePort':
         process_base_port_model(message, uuid, proton_name)
@@ -251,7 +271,7 @@ def getargs():
                         action='store_true')
     parser.add_argument('-H', '--host-name', required=False, help='etcd hostname or ip, default to localhost',
                         dest='etcd_host', type=str)
-    parser.add_argument('-p', '--port', required=False, help='etcd port number, default to 4001', dest='verbose',
+    parser.add_argument('-p', '--port', required=False, help='etcd port number, default to 2379', dest='verbose',
                         action='store_true')
 
     args = parser.parse_args()
@@ -276,7 +296,7 @@ def main():
         etcd_port = int(args.etcd_port)
 
     else:
-        etcd_port = 4001
+        etcd_port = 2379
 
     messages_queue = Queue()
     initialize_worker_thread(messages_queue)
@@ -295,7 +315,7 @@ def main():
             else:
                 message = client.read(proton_etcd_dir, recursive=True, wait=True)
 
-            messages_queue.put(message.value)
+            messages_queue.put(message)
 
             if (message.modifiedIndex - wait_index) > 1000:
                 wait_index = 0
@@ -303,10 +323,12 @@ def main():
             else:
                 wait_index = message.modifiedIndex + 1
 
+        except etcd.EtcdWatchTimedOut:
+            logger.info("timeout")
+            pass
         except etcd.EtcdException:
             logger.error("cannot connect to etcd, make sure that etcd is running")
             exit(1)
-
         except KeyboardInterrupt:
             logger.info("exiting on interrupt")
             exit(1)

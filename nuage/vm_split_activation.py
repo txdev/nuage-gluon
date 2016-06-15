@@ -92,7 +92,7 @@ class NUSplitActivation:
             logging.info("Domain %s not found, creating domain" % self.domain_name)
 
             domain = vsdk.NUDomain(name=self.domain_name,
-                                    template_id=self.domain_template_id)
+                                   template_id=self.domain_template_id)
             enterprise.create_child(domain)
 
             # update domain with the right values
@@ -120,7 +120,7 @@ class NUSplitActivation:
             logging.info("Subnet %s not found, creating subnet" % self.subnet_name)
 
             subnet = vsdk.NUSubnet(name=self.subnet_name, address=self.network_address,
-                                       netmask=self.netmask)
+                                   netmask=self.netmask)
             zone.create_child(subnet)
 
         # get vport
@@ -131,7 +131,7 @@ class NUSplitActivation:
             logging.info("Vport %s is not found, creating Vport" % self.vport_name)
 
             vport = vsdk.NUVPort(name=self.vport_name, address_spoofing='INHERITED', type='VM',
-                                     description='Automatically created, do not edit.')
+                                 description='Automatically created, do not edit.')
             subnet.create_child(vport)
 
         # get vm
