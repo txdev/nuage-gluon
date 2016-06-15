@@ -66,7 +66,7 @@ class NUSplitActivation:
         deactivate VM
         :return:
         """
-        vm = self.session.user.fetcher_for_rest_name('vm').get('uuid=="%s"' % self.vm_uuid)
+        vm = self.session.user.vms.get_first(filter='UUID== "%s"' % self.vm_uuid)
 
         return vm.delete()
 
