@@ -124,7 +124,7 @@ class NUSplitActivation:
         zone.subnets.fetch()
 
         subnet = next((subnet for subnet in zone.subnets if
-                       subnet.network_address == self.network_address and subnet.netmask == self.netmask), None)
+                       subnet.address == self.network_address and subnet.netmask == self.netmask), None)
         # get subnet
         # subnet = zone.subnets.get_first(filter='address == "%s"' % self.network_address)
 
