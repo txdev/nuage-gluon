@@ -53,7 +53,8 @@ valid_host_ids = ('cbserver5', 'host2', 'host3')
 
 proton_etcd_dir = '/net-l3vpn/proton'
 
-logger = logging.getLogger(__name__)
+#logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__).addHandler(logging.NullHandler())
 
 
 def notify_proton_vif(proton, uuid, vif_type):
