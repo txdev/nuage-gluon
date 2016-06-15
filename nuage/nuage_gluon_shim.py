@@ -54,7 +54,7 @@ valid_host_ids = ('cbserver5', 'host2', 'host3')
 proton_etcd_dir = '/net-l3vpn/proton'
 
 #logger = logging.getLogger(__name__)
-logger = logging.getLogger(__name__).addHandler(logging.NullHandler())
+#logger = logging.getLogger(__name__).addHandler(logging.NullHandler())
 
 
 def notify_proton_vif(proton, uuid, vif_type):
@@ -234,7 +234,7 @@ def process_base_port_model(message, uuid, proton_name):
             return
 
         else:
-            logger.error("failed activating vm")
+            logging.error("failed activating vm")
             return
 
         # check if need this
@@ -249,11 +249,11 @@ def process_base_port_model(message, uuid, proton_name):
             return
 
     else:
-        logger.error('unknown action %s' % action)
+        logging.error('unknown action %s' % action)
 
 
 def process_queue(messages_queue):
-    logger.info("processing queue")
+    logging.info("processing queue")
 
     while True:
         item = messages_queue.get()
@@ -263,15 +263,15 @@ def process_queue(messages_queue):
 
 def process_message(message):
 
-    logger.info("msg =  %s" % message)
-    #logger.info("msg.key =  %s" % message.key)
-    #logger.info("msg.value =  %s" % message.value)
-    #logger.info("msg.action =  %s" % message.action)
+    logging.info("msg =  %s" % message)
+    #logging.info("msg.key =  %s" % message.key)
+    #logging.info("msg.value =  %s" % message.value)
+    #logging.info("msg.action =  %s" % message.action)
 
     path = message.key.split('/')
 
     if len(path) < 5:
-        logger.error("unknown message %s, ignoring" % message)
+        logging.error("unknown message %s, ignoring" % message)
         return
 
     proton_name = path[1]
@@ -282,7 +282,7 @@ def process_message(message):
         process_base_port_model(message, uuid, proton_name)
 
     else:
-        logger.error('unrecognized table %s' % table)
+        logging.error('unrecognized table %s' % table)
         return
 
 def getargs():
@@ -301,9 +301,9 @@ def getargs():
 
 def main():
     global client
-    #cfg.CONF.log_opt_values(logger, logging.DEBUG)
-    #logger.setLevel(logging.DEBUG)
-    logger.info('Starting server in PID %s' % os.getpid())
+    #cfg.CONF.log_opt_values(logging, logging.DEBUG)
+    logging.setLevel(logging.DEBUG)
+    logging.info('Starting server in PID %s' % os.getpid())
 
     args = getargs()
 
@@ -328,7 +328,7 @@ def main():
     while True:
 
         try:
-            logger.info("watching %s" % proton_etcd_dir)
+            logging.info("watching %s" % proton_etcd_dir)
 
             if wait_index:
                 message = client.read(proton_etcd_dir, recursive=True, wait=True, waitIndex=wait_index)
@@ -345,13 +345,13 @@ def main():
                 wait_index = message.modifiedIndex + 1
 
         except etcd.EtcdWatchTimedOut:
-            logger.info("timeout")
+            logging.info("timeout")
             pass
         except etcd.EtcdException:
-            logger.error("cannot connect to etcd, make sure that etcd is running")
+            logging.error("cannot connect to etcd, make sure that etcd is running")
             exit(1)
         except KeyboardInterrupt:
-            logger.info("exiting on interrupt")
+            logging.info("exiting on interrupt")
             exit(1)
 
         except:
