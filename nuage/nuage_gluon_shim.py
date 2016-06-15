@@ -292,8 +292,8 @@ def getargs():
                         action='store_true')
     parser.add_argument('-H', '--host-name', required=False, help='etcd hostname or ip, default to localhost',
                         dest='etcd_host', type=str)
-    parser.add_argument('-p', '--port', required=False, help='etcd port number, default to 2379', dest='verbose',
-                        action='store_true')
+    parser.add_argument('-p', '--port', required=False, help='etcd port number, default to 2379', dest='etcd_port',
+                        type=str)
 
     args = parser.parse_args()
     return args
