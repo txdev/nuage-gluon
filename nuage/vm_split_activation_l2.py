@@ -100,7 +100,7 @@ class NUSplitActivationL2:
             domain.route_target=self.route_target
             domain.address=self.vm_ip
             domain.netmask=self.netmask
-            domain.vn_id=5000
+            domain.vn_id='5000'
             domain.dhcp_managed=True
             domain.save()
 
