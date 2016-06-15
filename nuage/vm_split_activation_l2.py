@@ -67,8 +67,10 @@ class NUSplitActivationL2:
         :return:
         """
         vm = self.session.user.vms.get_first(filter='UUID== "%s"' % self.vm_uuid)
+        vm.delete()
 
-        return vm.delete()
+        vport = vm.parent_object
+        vport.delete()
 
     def activate(self):
         """activate a VM
