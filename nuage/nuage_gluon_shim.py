@@ -151,7 +151,6 @@ def bind_vm(data, vpn_info):
 
 def unbind_vm(data, vpn_info):
 
-    prefix = data.get('subnet_prefix', '32')
     config = {
         'api_url': VSD,
         'domain_name': vpn_info['name'],
@@ -160,12 +159,7 @@ def unbind_vm(data, vpn_info):
         'username': 'csproot',
         'password': 'csproot',
         'vm_uuid': data.get('device_id', ''),
-        'vport_name': data.get('id', ''),
-        'zone_name': 'Zone0',
-        'route_distinguisher': vpn_info["route_distinguisher"],
-        'route_target': vpn_info["route_target"],
-        'netmask': compute_netmask(prefix),
-        'network_address': compute_network_addr(data.get('ipaddress', ''), prefix),
+        'vport_name': data.get('id', '')
     }
 
     sa = NUSplitActivation(config)

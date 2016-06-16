@@ -45,6 +45,7 @@ import ConfigParser
 
 from vspk import v3_2 as vsdk
 import logging
+
 logger = logging.getLogger(__name__)
 
 
@@ -68,22 +69,17 @@ class NUSplitActivation:
         :return:
         """
         try:
-            enterprise = self.session.user.enterprises.get_first(filter='name == "%s"' % self.enterprise_name)
-            enterprise.domains.fetch()
-            domain = next((domain for domain in enterprise.domains if
-                           domain.route_distinguisher == self.route_distinguisher and domain.route_target == self.route_target), None)
-            zone = domain.zones.get_first(filter='name == "%s"' % self.zone_name)
-            zone.subnets.fetch()
-            subnet = next((subnet for subnet in zone.subnets if
-                           subnet.address == self.network_address and subnet.netmask == self.netmask), None)
             vm = self.session.user.vms.get_first(filter='UUID== "%s"' % self.vm_uuid)
-            vport = subnet.vports.get_first(filter='name == "%s"' % self.vport_name)
-            vm.delete()
-            vport.delete()
-  	except Exception as e:
-            logger.critical("Error on vm and vport deletion %s" % e);
 
-        #vport.delete()
+            for interface in vm.vm_interfaces.get():
+                if interface.vport_name == self.vport_name:
+                    vport = vsdk.NUVPort(id=interface.vport_id)
+                    # vport.fetch()
+                    vm.delete()
+                    vport.delete()
+
+        except Exception as e:
+            logger.critical("Error on vm and vport deletion %s" % e);
 
         return
 
@@ -103,7 +99,8 @@ class NUSplitActivation:
         enterprise.domains.fetch()
 
         domain = next((domain for domain in enterprise.domains if
-                       domain.route_distinguisher == self.route_distinguisher and domain.route_target == self.route_target), None)
+                       domain.route_distinguisher == self.route_distinguisher and domain.route_target == self.route_target),
+                      None)
 
         if domain is None:
             logger.info("Domain %s not found, creating domain" % self.domain_name)
@@ -113,12 +110,12 @@ class NUSplitActivation:
             enterprise.create_child(domain)
 
             # update domain with the right values
-            domain.tunnel_type=self.tunnel_type
-            domain.route_distinguisher=self.route_distinguisher
-            domain.route_target=self.route_target
-            domain.back_haul_route_target='20000:20000'
-            domain.back_haul_route_distinguisher='20000:20000'
-            domain.back_haul_vnid='25000'
+            domain.tunnel_type = self.tunnel_type
+            domain.route_distinguisher = self.route_distinguisher
+            domain.route_target = self.route_target
+            domain.back_haul_route_target = '20000:20000'
+            domain.back_haul_route_distinguisher = '20000:20000'
+            domain.back_haul_vnid = '25000'
             domain.save()
 
         # get zone
@@ -190,7 +187,8 @@ class NUSplitActivation:
         if domain is None:
             logger.info("Domain %s not found, creating domain" % self.domain_name)
 
-            domain = vsdk.NUDomain(name=self.domain_name, route_target=self.route_target, route_distinguisher=self.route_distinguisher, template_id=self.domain_template_id)
+            domain = vsdk.NUDomain(name=self.domain_name, route_target=self.route_target,
+                                   route_distinguisher=self.route_distinguisher, template_id=self.domain_template_id)
             enterprise.create_child(domain)
 
         # get zone
@@ -225,7 +223,7 @@ class NUSplitActivation:
 
         # get vm
         vm = self.session.user.vms.get_first(filter='name == "%s"' % self.vm_name)
-        #vm = self.session.user.fetcher_for_rest_name('vm').get('name=="%s"' % self.vm_name)
+        # vm = self.session.user.fetcher_for_rest_name('vm').get('name=="%s"' % self.vm_name)
 
         if not vm:
             logger.info("VM %s is not found, creating VM" % self.vm_name)
@@ -269,7 +267,7 @@ def parse_config_file(config_file):
     for section in parser.sections():
         for name, value in parser.items(section):
             config[name] = value
-            logger.info("config key %s has value %s" % (name,value))
+            logger.info("config key %s has value %s" % (name, value))
 
     return config
 
@@ -326,6 +324,7 @@ def main():
 
         else:
             logger.info("VM activation failed")
+
 
 if __name__ == "__main__":
     main()
