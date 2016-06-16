@@ -49,7 +49,7 @@ logger = logging.getLogger(__name__)
 
 
 class NUSplitActivation:
-    domain_template_id = 'cc67f3c3-7c32-4967-b090-6691a09c2777'
+    domain_template_id = '07db2b65-b76b-441d-a80c-4060b604aecd'
 
     def __init__(self, config):
         for k, v in config.items():
@@ -67,13 +67,22 @@ class NUSplitActivation:
         deactivate VM
         :return:
         """
-        vm = self.session.user.vms.get_first(filter='UUID== "%s"' % self.vm_uuid)
-        vm.delete()
+        try:
+            enterprise = self.session.user.enterprises.get_first(filter='name == "%s"' % self.enterprise_name)
+            enterprise.domains.fetch()
+            domain = next((domain for domain in enterprise.domains if
+                           domain.route_distinguisher == self.route_distinguisher and domain.route_target == self.route_target), None)
+            zone = domain.zones.get_first(filter='name == "%s"' % self.zone_name)
+            zone.subnets.fetch()
+            subnet = next((subnet for subnet in zone.subnets if
+                           subnet.address == self.network_address and subnet.netmask == self.netmask), None)
+            vm = self.session.user.vms.get_first(filter='UUID== "%s"' % self.vm_uuid)
+            vport = subnet.vports.get_first(filter='name == "%s"' % self.vport_name)
+            vm.delete()
+            vport.delete()
+  	except Exception as e:
+            logger.critical("Error on vm and vport deletion %s" % e);
 
-        vport = vm.parent_object
-        vport.delete()
-
-        #vport = subnet.vports.get_first(filter='name == "%s"' % self.vport_name)
         #vport.delete()
 
         return

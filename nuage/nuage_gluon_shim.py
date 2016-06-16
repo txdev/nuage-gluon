@@ -45,12 +45,14 @@ from threading import Thread
 
 from nuage.vm_split_activation import NUSplitActivation
 
+VSD = 'https://10.2.0.40:8443'
+
 client = None
 prev_mod_index = 0
 vm_status = {}
 
 #valid_host_ids = ('cbserver5', 'host2', 'host3')
-valid_host_ids = ('node-23.opnfvericsson.ca')
+valid_host_ids = ('cbserver5', 'node-23.opnfvericsson.ca')
 
 proton_etcd_dir = '/net-l3vpn/proton'
 
@@ -118,14 +120,12 @@ def bind_vm(data, vpn_info):
 
     subnet_name =  'Subnet' + str(time.clock())
     subnet_name = string.replace(subnet_name, '.', '-')
-    zone_name =  'Zone' + str(time.clock())
-    zone_name = string.replace(zone_name, '.', '-')
 
     prefix = data.get('subnet_prefix', '32')
     print('prefix = %s' % prefix)
 
     config = {
-        'api_url': 'https://10.118.101.149:8443',
+        'api_url': VSD,
         'domain_name': vpn_info['name'],
         'enterprise': 'csp',
         'enterprise_name': 'Gluon',
@@ -151,14 +151,21 @@ def bind_vm(data, vpn_info):
 
 def unbind_vm(data, vpn_info):
 
+    prefix = data.get('subnet_prefix', '32')
     config = {
-        'api_url': 'https://10.118.101.149:8443',
+        'api_url': VSD,
         'domain_name': vpn_info['name'],
         'enterprise': 'csp',
+        'enterprise_name': 'Gluon',
         'username': 'csproot',
         'password': 'csproot',
         'vm_uuid': data.get('device_id', ''),
-        'vport_name': data.get('id', '')
+        'vport_name': data.get('id', ''),
+        'zone_name': 'Zone0',
+        'route_distinguisher': vpn_info["route_distinguisher"],
+        'route_target': vpn_info["route_target"],
+        'netmask': compute_netmask(prefix),
+        'network_address': compute_network_addr(data.get('ipaddress', ''), prefix),
     }
 
     sa = NUSplitActivation(config)
@@ -214,6 +221,12 @@ def process_base_port_model(message, uuid, proton_name):
             logging.info("host id is empty")
             if vm_status.get(uuid, '') == 'up':
                 logging.info("Port is bound,  need to unbind: TODO")
+                if not hasattr(message, '_prev_node'):
+                    logging.info("_prev_node is not available")
+                    return
+                vpn_info = get_vpn_info(client, uuid)
+                unbind_vm(json.loads(message._prev_node.value), vpn_info)
+		del vm_status[uuid]
                 return
 
         if not message_value['host_id'] in valid_host_ids:
