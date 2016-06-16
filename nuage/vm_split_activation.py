@@ -50,8 +50,6 @@ logger = logging.getLogger(__name__)
 
 
 class NUSplitActivation:
-    domain_template_id = '07db2b65-b76b-441d-a80c-4060b604aecd'
-
     def __init__(self, config):
         for k, v in config.items():
             setattr(self, k, v)
@@ -105,8 +103,9 @@ class NUSplitActivation:
         if domain is None:
             logger.info("Domain %s not found, creating domain" % self.domain_name)
 
+            domain_template_id = enterprise.domain_templates.get_first(filter='name == "%s"' % self.domain_template_name)
             domain = vsdk.NUDomain(name=self.domain_name,
-                                   template_id=self.domain_template_id)
+                                   template_id=domain_template_id)
             enterprise.create_child(domain)
 
             # update domain with the right values

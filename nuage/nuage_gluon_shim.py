@@ -142,7 +142,8 @@ def bind_vm(data, vpn_info):
         'vm_uuid': data.get('device_id',''),
         'vport_name': data.get('id', ''),
         'zone_name': 'Zone0',
-        'tunnel_type' : 'GRE'
+        'tunnel_type': 'GRE',
+        'domain_template_name': 'GluonDomainTemplate'
     }
 
     sa = NUSplitActivation(config)

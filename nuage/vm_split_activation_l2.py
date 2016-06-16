@@ -48,9 +48,6 @@ import logging
 
 
 class NUSplitActivationL2:
-    domain_template_id = 'cc67f3c3-7c32-4967-b090-6691a09c2777'
-
-
     def __init__(self, config):
         for k, v in config.items():
             setattr(self, k, v)
@@ -93,9 +90,8 @@ class NUSplitActivationL2:
 
         if domain is None:
             logging.info("Domain %s not found, creating domain" % self.domain_name)
-
-            domain = vsdk.NUL2Domain(name=self.domain_name,
-                                    template_id=self.domain_template_id)
+            l2_domain_template_id = enterprise.l2_domain_templates.get_first(filter='name == "%s"' % self.l2_domain_template_name)
+            domain = vsdk.NUL2Domain(name=self.domain_name, template_id=l2_domain_template_id)
             enterprise.create_child(domain)
 
             # update domain with the right values
