@@ -32,12 +32,9 @@ import etcd
 import os
 import json
 import argparse
-import urllib3
 import time
 import string
 
-#from oslo_log import log as logging
-#from oslo_config import cfg
 import logging
 
 from Queue import Queue
@@ -45,19 +42,16 @@ from threading import Thread
 
 from nuage.vm_split_activation import NUSplitActivation
 
-VSD = 'https://10.2.0.40:8443'
+vsd_api_url = 'https://127.0.0.1:8443'
+etcd_default_port = 2379
 
 client = None
 prev_mod_index = 0
 vm_status = {}
 
-#valid_host_ids = ('cbserver5', 'host2', 'host3')
 valid_host_ids = ('cbserver5', 'node-23.opnfvericsson.ca')
 
 proton_etcd_dir = '/net-l3vpn/proton'
-
-#logger = logging.getLogger(__name__)
-#logger = logging.getLogger(__name__).addHandler(logging.NullHandler())
 
 
 def notify_proton_vif(proton, uuid, vif_type):
@@ -125,7 +119,7 @@ def bind_vm(data, vpn_info):
     print('prefix = %s' % prefix)
 
     config = {
-        'api_url': VSD,
+        'api_url': vsd_api_url,
         'domain_name': vpn_info['name'],
         'enterprise': 'csp',
         'enterprise_name': 'Gluon',
@@ -153,7 +147,7 @@ def bind_vm(data, vpn_info):
 def unbind_vm(data, vpn_info):
 
     config = {
-        'api_url': VSD,
+        'api_url': vsd_api_url,
         'domain_name': vpn_info['name'],
         'enterprise': 'csp',
         'enterprise_name': 'Gluon',
@@ -214,14 +208,16 @@ def process_base_port_model(message, uuid, proton_name):
 
         if message_value['host_id'] is None or message_value['host_id'] == '':
             logging.info("host id is empty")
+
             if vm_status.get(uuid, '') == 'up':
                 logging.info("Port is bound,  need to unbind: TODO")
+
                 if not hasattr(message, '_prev_node'):
                     logging.info("_prev_node is not available")
                     return
                 vpn_info = get_vpn_info(client, uuid)
                 unbind_vm(json.loads(message._prev_node.value), vpn_info)
-		del vm_status[uuid]
+                del vm_status[uuid]
                 return
 
         if not message_value['host_id'] in valid_host_ids:
@@ -294,6 +290,7 @@ def process_message(message):
         logging.error('unrecognized table %s' % table)
         return
 
+
 def getargs():
     parser = argparse.ArgumentParser(description='Start Shim Layer')
 
@@ -303,14 +300,15 @@ def getargs():
                         dest='etcd_host', type=str)
     parser.add_argument('-p', '--port', required=False, help='etcd port number, default to 2379', dest='etcd_port',
                         type=str)
+    parser.add_argument('-v', '--vsd-ip', required=False, help='Nuage vsd ip address, default to 127.0.0.1', dest='vsd_ip',
+                        type=str)
 
     args = parser.parse_args()
     return args
 
 
 def main():
-    global client
-    #cfg.CONF.log_opt_values(logging, logging.DEBUG)
+    global client, vsd_api_url
     logging.basicConfig(level=logging.DEBUG)
     logging.info('Starting server in PID %s' % os.getpid())
 
@@ -326,7 +324,10 @@ def main():
         etcd_port = int(args.etcd_port)
 
     else:
-        etcd_port = 2379
+        etcd_port = etcd_default_port
+
+    if args.vsd_ip:
+        vsd_api_url = 'https://' + args.vsd_ip + ':8443'
 
     messages_queue = Queue()
     initialize_worker_thread(messages_queue)
@@ -356,9 +357,11 @@ def main():
         except etcd.EtcdWatchTimedOut:
             logging.info("timeout")
             pass
+
         except etcd.EtcdException:
             logging.error("cannot connect to etcd, make sure that etcd is running")
             exit(1)
+
         except KeyboardInterrupt:
             logging.info("exiting on interrupt")
             exit(1)
