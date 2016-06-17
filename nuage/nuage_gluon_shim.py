@@ -366,11 +366,10 @@ def main():
     if args.vsd_ip:
         vsd_api_url = 'https://' + args.vsd_ip + ':8443'
 
-    restore_bind_status()
-
     messages_queue = Queue()
     initialize_worker_thread(messages_queue)
     client = etcd.Client(host=etcd_host, port=etcd_port)
+    restore_bind_status()
 
     wait_index = 0
 
