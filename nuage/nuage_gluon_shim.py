@@ -108,7 +108,7 @@ def restore_bind_status():
 
     for status in statuses.children:
         val = json.loads(status.value)
-        vm_status[ntpath.basename(val.key)] = val["status"]
+        vm_status[ntpath.basename(status.key)] = val["status"]
 
 
 def initialize_worker_thread(messages_queue):
