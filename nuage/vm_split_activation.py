@@ -107,9 +107,9 @@ class NUSplitActivation:
             if domain is None:
                 logger.info("Domain %s not found, creating domain" % self.domain_name)
 
-                domain_template_id = enterprise.domain_templates.get_first(filter='name == "%s"' % self.domain_template_name)
+                domain_template = enterprise.domain_templates.get_first(filter='name == "%s"' % self.domain_template_name)
                 domain = vsdk.NUDomain(name=self.domain_name,
-                                       template_id=domain_template_id.id)
+                                       template_id=domain_template.id)
                 enterprise.create_child(domain)
 
                 # update domain with the right values
