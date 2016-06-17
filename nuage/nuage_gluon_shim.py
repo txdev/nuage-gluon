@@ -106,7 +106,7 @@ def restore_bind_status():
         logging.error("reading keys failed %s" % str(e))
         return
 
-    for status in statuses:
+    for status in statuses.children:
         val = json.loads(status.value)
         vm_status[ntpath.basename(val.key)] = val["status"]
 
