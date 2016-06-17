@@ -34,6 +34,7 @@ import json
 import argparse
 import time
 import string
+import ntpath
 
 import logging
 
@@ -44,6 +45,7 @@ from nuage.vm_split_activation import NUSplitActivation
 
 vsd_api_url = 'https://127.0.0.1:8443'
 etcd_default_port = 2379
+etcd_nuage_path = '/controller/nuage/'
 
 client = None
 prev_mod_index = 0
@@ -64,6 +66,49 @@ def notify_proton_status(proton, uuid, status):
     path = proton + '/controller/port/' + uuid
     data = {"status": status}
     client.write(path, json.dumps(data))
+
+
+def save_bind_status(uuid, status):
+    """ save the vm status both in etcd and in-memory dictionary
+    """
+
+    path = etcd_nuage_path + uuid
+    data = {"status": status}
+
+    try:
+        if status == 'unbound':
+            client.delete(path)
+            del vm_status[uuid]
+
+        else:
+            client.write(path, json.dumps(data))
+            vm_status[uuid] = status
+
+    except Exception, e:
+        logging.error("saving bind status failed %s" % str(e))
+
+
+def update_bind_status(proton, uuid, status):
+    """wrapper function to call status update of the bind operation"""
+    notify_proton_status(proton, uuid, status)
+    save_bind_status(uuid,status)
+
+
+def restore_bind_status():
+    """restore the bind status from etcd to in-memory dict, typically called during program startup"""
+
+    global vm_status
+
+    try:
+        statuses = client.read(etcd_nuage_path)
+
+    except Exception, e:
+        logging.error("reading keys failed %s" % str(e))
+        return
+
+    for status in statuses:
+        val = json.loads(status.value)
+        vm_status[ntpath.basename(val.key)] = val["status"]
 
 
 def initialize_worker_thread(messages_queue):
@@ -198,7 +243,6 @@ def get_vpn_info(client, uuid):
 
 def process_base_port_model(message, uuid, proton_name):
     global client
-    global vm_status
     global valid_host_ids
 
     action = message.action
@@ -217,7 +261,7 @@ def process_base_port_model(message, uuid, proton_name):
                     return
                 vpn_info = get_vpn_info(client, uuid)
                 unbind_vm(json.loads(message._prev_node.value), vpn_info)
-                del vm_status[uuid]
+                update_bind_status(proton_name, uuid, 'unbound')
                 return
 
         if not message_value['host_id'] in valid_host_ids:
@@ -227,30 +271,23 @@ def process_base_port_model(message, uuid, proton_name):
         if uuid in vm_status and vm_status[uuid] == 'pending':
             return
 
-        notify_proton_status(proton_name, uuid, 'pending')
-
-        vm_status[uuid] = 'pending'
+        update_bind_status(proton_name, uuid, 'pending')
 
         vpn_info = get_vpn_info(client, uuid)
 
         if bind_vm(json.loads(message.value), vpn_info):
-            notify_proton_status(proton_name, uuid, 'up')
-            vm_status[uuid] = 'up'
+            update_bind_status(proton_name, uuid, 'up')
             return
 
         else:
             logging.error("failed activating vm")
             return
 
-        # check if need this
-        if uuid in vm_status and vm_status[uuid] == 'unbound':
-            notify_proton_status(proton_name, uuid, 'pending')
-            pass
-
     elif action == 'delete':
-        if (vm_status[uuid] == 'up'):
+        if vm_status[uuid] == 'up':
             vpn_info = get_vpn_info(client, uuid)
             unbind_vm(json.loads(message.value), vpn_info)
+            update_bind_status(proton_name, uuid, 'unbound')
             return
 
     else:
@@ -287,7 +324,7 @@ def process_message(message):
         process_base_port_model(message, uuid, proton_name)
 
     else:
-        logging.error('unrecognized table %s' % table)
+        logging.info('table %s is not monitored' % table)
         return
 
 
@@ -328,6 +365,8 @@ def main():
 
     if args.vsd_ip:
         vsd_api_url = 'https://' + args.vsd_ip + ':8443'
+
+    restore_bind_status()
 
     messages_queue = Queue()
     initialize_worker_thread(messages_queue)

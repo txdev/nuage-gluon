@@ -54,12 +54,16 @@ class NUSplitActivation:
         for k, v in config.items():
             setattr(self, k, v)
 
-        self.session = vsdk.NUVSDSession(username=self.username, password=self.password,
-                                         enterprise=self.enterprise, api_url=self.api_url)
+        try:
+            self.session = vsdk.NUVSDSession(username=self.username, password=self.password,
+                                             enterprise=self.enterprise, api_url=self.api_url)
 
-        logger.info("starting session username: %s, password: %s, enterprise: %s, api_url: %s" % (
-            self.username, self.password, self.enterprise, self.api_url))
-        self.session.start()
+            logger.info("starting session username: %s, password: %s, enterprise: %s, api_url: %s" % (
+                self.username, self.password, self.enterprise, self.api_url))
+            self.session.start()
+
+        except Exception, e:
+            logger.error("creating VSD session failed with error %s" % str(e))
 
     def deactivate(self):
         """
@@ -77,96 +81,99 @@ class NUSplitActivation:
                     vport.delete()
 
         except Exception as e:
-            logger.critical("Error on vm and vport deletion %s" % e);
+            logger.critical("Error on vm and vport deletion %s" % str(e));
 
         return
 
     def activate(self):
         """activate a VM
         """
+        try:
+            # get enterprise
+            enterprise = self.session.user.enterprises.get_first(filter='name == "%s"' % self.enterprise_name)
 
-        # get enterprise
-        enterprise = self.session.user.enterprises.get_first(filter='name == "%s"' % self.enterprise_name)
+            if enterprise is None:
+                logger.critical("Enterprise %s not found, exiting" % enterprise)
+                print "can't find enterprise"
+                return False
 
-        if enterprise is None:
-            logger.critical("Enterprise %s not found, exiting" % enterprise)
-            print "can't find enterprise"
-            return False
+            # get domains
+            enterprise.domains.fetch()
 
-        # get domains
-        enterprise.domains.fetch()
+            domain = next((domain for domain in enterprise.domains if
+                           domain.route_distinguisher == self.route_distinguisher and domain.route_target == self.route_target),
+                          None)
 
-        domain = next((domain for domain in enterprise.domains if
-                       domain.route_distinguisher == self.route_distinguisher and domain.route_target == self.route_target),
-                      None)
+            if domain is None:
+                logger.info("Domain %s not found, creating domain" % self.domain_name)
 
-        if domain is None:
-            logger.info("Domain %s not found, creating domain" % self.domain_name)
+                domain_template_id = enterprise.domain_templates.get_first(filter='name == "%s"' % self.domain_template_name)
+                domain = vsdk.NUDomain(name=self.domain_name,
+                                       template_id=domain_template_id)
+                enterprise.create_child(domain)
 
-            domain_template_id = enterprise.domain_templates.get_first(filter='name == "%s"' % self.domain_template_name)
-            domain = vsdk.NUDomain(name=self.domain_name,
-                                   template_id=domain_template_id)
-            enterprise.create_child(domain)
+                # update domain with the right values
+                domain.tunnel_type = self.tunnel_type
+                domain.route_distinguisher = self.route_distinguisher
+                domain.route_target = self.route_target
+                domain.back_haul_route_target = '20000:20000'
+                domain.back_haul_route_distinguisher = '20000:20000'
+                domain.back_haul_vnid = '25000'
+                domain.save()
 
-            # update domain with the right values
-            domain.tunnel_type = self.tunnel_type
-            domain.route_distinguisher = self.route_distinguisher
-            domain.route_target = self.route_target
-            domain.back_haul_route_target = '20000:20000'
-            domain.back_haul_route_distinguisher = '20000:20000'
-            domain.back_haul_vnid = '25000'
-            domain.save()
+            # get zone
+            zone = domain.zones.get_first(filter='name == "%s"' % self.zone_name)
 
-        # get zone
-        zone = domain.zones.get_first(filter='name == "%s"' % self.zone_name)
+            if zone is None:
+                logger.info("Zone %s not found, creating zone" % self.zone_name)
 
-        if zone is None:
-            logger.info("Zone %s not found, creating zone" % self.zone_name)
+                zone = vsdk.NUZone(name=self.zone_name)
+                domain.create_child(zone)
 
-            zone = vsdk.NUZone(name=self.zone_name)
-            domain.create_child(zone)
+            zone.subnets.fetch()
 
-        zone.subnets.fetch()
+            subnet = next((subnet for subnet in zone.subnets if
+                           subnet.address == self.network_address and subnet.netmask == self.netmask), None)
+            # get subnet
+            # subnet = zone.subnets.get_first(filter='address == "%s"' % self.network_address)
 
-        subnet = next((subnet for subnet in zone.subnets if
-                       subnet.address == self.network_address and subnet.netmask == self.netmask), None)
-        # get subnet
-        # subnet = zone.subnets.get_first(filter='address == "%s"' % self.network_address)
+            if subnet is None:
+                logger.info("Subnet %s not found, creating subnet" % self.subnet_name)
 
-        if subnet is None:
-            logger.info("Subnet %s not found, creating subnet" % self.subnet_name)
+                subnet = vsdk.NUSubnet(name=self.subnet_name, address=self.network_address,
+                                       netmask=self.netmask)
+                zone.create_child(subnet)
 
-            subnet = vsdk.NUSubnet(name=self.subnet_name, address=self.network_address,
-                                   netmask=self.netmask)
-            zone.create_child(subnet)
+            # get vport
+            vport = subnet.vports.get_first(filter='name == "%s"' % self.vport_name)
 
-        # get vport
-        vport = subnet.vports.get_first(filter='name == "%s"' % self.vport_name)
+            if vport is None:
+                # create vport
+                logger.info("Vport %s is not found, creating Vport" % self.vport_name)
 
-        if vport is None:
-            # create vport
-            logger.info("Vport %s is not found, creating Vport" % self.vport_name)
+                vport = vsdk.NUVPort(name=self.vport_name, address_spoofing='INHERITED', type='VM',
+                                     description='Automatically created, do not edit.')
+                subnet.create_child(vport)
 
-            vport = vsdk.NUVPort(name=self.vport_name, address_spoofing='INHERITED', type='VM',
-                                 description='Automatically created, do not edit.')
-            subnet.create_child(vport)
+            # get vm
+            vm = self.session.user.fetcher_for_rest_name('vm').get('uuid=="%s"' % self.vm_uuid)
 
-        # get vm
-        vm = self.session.user.fetcher_for_rest_name('vm').get('uuid=="%s"' % self.vm_uuid)
+            if not vm:
+                logger.info("VM %s is not found, creating VM" % self.vm_name)
 
-        if not vm:
-            logger.info("VM %s is not found, creating VM" % self.vm_name)
+                vm = vsdk.NUVM(name=self.vm_name, uuid=self.vm_uuid, interfaces=[{
+                    'name': self.vm_name,
+                    'VPortID': vport.id,
+                    'MAC': self.vm_mac,
+                    'IPAddress': self.vm_ip
+                }])
 
-            vm = vsdk.NUVM(name=self.vm_name, uuid=self.vm_uuid, interfaces=[{
-                'name': self.vm_name,
-                'VPortID': vport.id,
-                'MAC': self.vm_mac,
-                'IPAddress': self.vm_ip
-            }])
+                self.session.user.create_child(vm)
 
-            self.session.user.create_child(vm)
+            return True
 
-        return True
+        except Exception, e:
+            logger.error("activating vm failed with exception %s" % str(e))
 
     def activate_by_name(self):
         """activate vm. Uses names to identify domain, subnet, and vm
