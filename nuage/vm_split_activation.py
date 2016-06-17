@@ -109,7 +109,7 @@ class NUSplitActivation:
 
                 domain_template_id = enterprise.domain_templates.get_first(filter='name == "%s"' % self.domain_template_name)
                 domain = vsdk.NUDomain(name=self.domain_name,
-                                       template_id=domain_template_id)
+                                       template_id=domain_template_id.id)
                 enterprise.create_child(domain)
 
                 # update domain with the right values
