@@ -108,6 +108,7 @@ def restore_bind_status():
 
     for status in statuses.children:
         val = json.loads(status.value)
+        logging.info("storing key %s and value %s" % (status.key, val["status"]))
         vm_status[ntpath.basename(status.key)] = val["status"]
 
 
