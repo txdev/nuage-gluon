@@ -398,8 +398,8 @@ def main():
             pass
 
         except etcd.EtcdException:
-            logging.error("cannot connect to etcd, make sure that etcd is running")
-            exit(1)
+            logging.error("Cannot connect to etcd, make sure that etcd is running. Trying in 5 seconds")
+            time.sleep(5)
 
         except KeyboardInterrupt:
             logging.info("exiting on interrupt")
