@@ -12,8 +12,8 @@ Etcd listener watches for port create/update/delete messages from Gluon. The lis
 A message is processed only if the host is one of the manage compute hosts.
 
 ### Usage
-> python setup.py install
-> nuage-shim-server -H <etcd-hostname> -p <etcd-port> -v <vsd-ip> -d
+	python setup.py install
+	nuage-shim-server -H <etcd-hostname> -p <etcd-port> -v <vsd-ip> -d
 
 ## Nuage Split Activation of VMs using Python SDK
 Activate VMs on Nuage. The VMs need to be instantiated on the compute using "virsh" command. 
