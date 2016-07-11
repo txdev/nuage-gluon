@@ -107,6 +107,7 @@ def restore_bind_status():
                 val = json.loads(status.value)
                 logging.info("storing key %s and value %s" % (status.key, val["status"]))
                 vm_status[ntpath.basename(status.key)] = val["status"]
+        logging.info("vm_status = %s", vm_status)
 
     except Exception, e:
         logging.error("reading keys failed %s" % str(e))
@@ -255,9 +256,8 @@ def process_base_port_model(message, uuid, proton_name):
         if message_value['host_id'] is None or message_value['host_id'] == '':
             logging.info("host id is empty")
 
-            if vm_status.get(uuid, '') == 'up':
-                logging.info("Port is bound,  need to unbind: TODO")
-
+            if vm_status.get(uuid, '') == 'up' or vm_status.get(uuid, '') == 'pending':
+                logging.info("Port is bound,  need to unbind")
                 if not hasattr(message, '_prev_node'):
                     logging.info("_prev_node is not available")
                     return
@@ -280,7 +280,6 @@ def process_base_port_model(message, uuid, proton_name):
         if bind_vm(json.loads(message.value), vpn_info):
             update_bind_status(proton_name, uuid, 'up')
             return
-
         else:
             logging.error("failed activating vm")
             return
@@ -370,7 +369,7 @@ def main():
 
     messages_queue = Queue()
     initialize_worker_thread(messages_queue)
-    client = etcd.Client(host=etcd_host, port=etcd_port)
+    client = etcd.Client(host=etcd_host, port=etcd_port, read_timeout=3600)
     restore_bind_status()
 
     wait_index = 0

@@ -1,4 +1,6 @@
 .idea
+.eggs
+.eggs/*
 *.pyc
 /build
 /nuage_gluon.egg-info
